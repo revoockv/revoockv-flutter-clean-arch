@@ -1,0 +1,32 @@
+# Widget rules
+
+- Prefer `StatelessWidget` above everything else.
+- `StatefulWidget` only where the framework needs a `State`: `AnimationController` (`vsync`), `didUpdateWidget`. Resources are owned with `createOnce` in a `WatchingWidget`, or by a UI controller (`references/controllers.md` → "Owner and rebuilds").
+- Even with `StatefulWidget`, never use `setState` — UI state lives in `ValueNotifier`s and is read with `watch(...).value`.
+- A controller is needed only when the widget has UI logic (progress, the error of the last action, form state, several Flutter controllers working together). A widget that only shows domain state and calls use cases needs no controller — see `references/controllers.md`.
+- A controller is a plain class that owns notifiers / Flutter controllers, or is itself a `ValueNotifier<T>`. It is self-contained like `TextEditingController`: no getters, no DI — use cases come in through its constructor as functions. The state of one thing is one value (sealed class, enum, `ResultState`), not several notifiers.
+- Domain/data state comes from `watch...UseCase` getters — it is never copied into a controller, and a controller never touches data sources, services or repositories.
+- NEVER use widget helper methods returning widgets; create a separate `StatelessWidget` in the `widgets/` folder instead.
+  - Exception: if a widget tree consists of many small widgets that are never used elsewhere, create them as private widgets (`_PrivateWidget`) in the same file as the parent widget instead of creating separate files.
+- All widget class and file names must end with the suffix `_widget`.
+- All page class and file names must end with the suffix `_page`.
+- Use `WatchingWidget` only when a widget calls `watch()` / `registerHandler()` — on a watch use case (`watch(watch<Name>UseCase()).value`; use cases with the `watch` prefix return `ValueListenable<T>`) or on its controller (`watch(controller).value.isLoading`), or owns a controller with `createOnce()`.
+- A widget that owns a controller is a `WatchingWidget`: `createOnce(_createController, dispose: _disposeController)` creates it once and disposes it with the widget. The owner reacts with `registerHandler` (no rebuild) and passes the controller down as `ValueListenable<S>`; only the lowest widget that shows the value watches it — see `references/controllers.md`.
+- A widget that only receives a Flutter controller (`TextField(controller: textController)`) is a `StatelessWidget` — it does not own it.
+- Prefer `WatchingWidget` at the smallest possible widget level that exactly must rebuild when a specific listenable changes.
+  Example: `final int count = watch(watchCounterUseCase()).value;`
+- Never use `watchValue()` / `watchIt()` in widgets.
+- Snackbars, dialogs and one-off navigation in response to state go into `registerHandler(target: …, handler: _onX)`, never into `build()`. Which screen a state needs is a `watch` + `switch` over the sealed state — see `references/reactive_state_syntax.md`.
+- `watch()` / `registerHandler()` / `createOnce()` are called unconditionally at the top of `build()` — never inside `if` / `for` / `switch` or callbacks (linter: `watch_order`).
+- All magic numbers and strings must be declared as `static const` variables immediately after the class declaration and before the constructor.
+- Magic strings (UI text, labels, messages) must be extracted to `static const` — never hardcoded in widget trees.
+- All `static const` fields must be placed above the constructor, not after it.
+- Colors, width, height, padding values, font weights — if const, must be extracted to `static const`.
+- A value used by several features (spacing, sizes, colors) is not duplicated: it lives in `AppTheme` in `lib/core/presentation/theme.dart` and is used as `AppTheme.spacingMedium` (linter: `theme_import`).
+- **Color const names must describe the color's purpose, not the color itself.** Use `_errorTextColor`, `_buttonForegroundColor`, `_scaffoldBackgroundColor` — never `_kRed`, `_blue`, `_white`.
+- **Private widgets must declare their own `static const` fields** — never reference consts from the parent widget class. Each private widget (`_PrivateWidget`) declares its own constants immediately after its class declaration and before its constructor.
+- **Inline callbacks are forbidden** — `onPressed`, `onChanged`, `onSubmitted`, and similar callback properties must reference a private method of the widget class (e.g., `_onPressed()`), never contain inline closures.
+- Relative imports inside a feature; `package:<your_app>/core/...` imports for core (see `references/imports.md`).
+- `watch*UseCase` getter must come from DI getters, never imported directly from domain.
+- After making changes always run `flutter analyze` to verify correctness.
+- After creating new files, add them to git if the project is a git repository and the user does not object.
