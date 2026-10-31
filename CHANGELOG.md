@@ -15,9 +15,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Example app: the `api_server` feature (state, start / stop / check token use cases, `RelicApiServerDataSource`,
   `NotesRoutes`, switch page behind the Wi-Fi button of the notes page) and core JSON helpers
   (`JsonResponses`, `JsonRequests`, `ErrorDto`), with repository, routes (real server on port 0) and page tests.
-- Linter: optional presentation folders `routes/`, `dto/`, `middleware/` (files `*_routes.dart`, `*_dto.dart`,
-  `*_middleware.dart`); routes, DTOs and middleware must not import getters or DI; new rule `show_imports`
-  (relic and rxdart only with `show`) — 29 rules.
+- Linter 0.7.1: ignored paths — folders and files the linter skips entirely (also in `folder_naming`), listed one per
+  line (relative to the project root, globs, `#` comments) in a global `<skill>/.clean_arch_ignore`, a local
+  `<project>/.clean_arch_ignore` or `--ignore-paths`. The rules stay those of 0.7.0 (28); the example app lists its
+  server folders (`routes/`, `dto/`, `middleware/`) in its `.clean_arch_ignore`.
+
+### Fixed
+- Linter: a field of a function type split over lines (`final X Function({ … }) _f;`) is not a public method
+  (`dartdoc_public`).
 - `check_versions.py` tracks `relic`; `selfcheck.py` compares the `api_server` code of the docs with the example.
 
 ## [0.7.0] - 2026-10-29

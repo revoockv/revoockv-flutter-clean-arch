@@ -17,7 +17,7 @@ dependencies:
 
 Relic exports its own `Result` and `Logger` — import it **only with `show`**, and name the extensions you use
 (`RouteEx` for `router.get/post`, `HeadersEx` for `request.headers.authorization`, `RelicAppIOServeEx` for `serve`,
-`PathParametersRequestEx` + `RawEx` for path parameters) — linter: `show_imports`.
+`PathParametersRequestEx` + `RawEx` for path parameters).
 
 ## Layout of the feature
 
@@ -41,12 +41,23 @@ lib/core/presentation/dto/error_dto.dart
 `routes/`, `dto/` and `middleware/` are optional presentation folders: only a serving feature has them (and
 `core/presentation/` for the shared JSON helpers). Files end with `_routes.dart`, `_dto.dart`, `_middleware.dart`.
 
+They are not Flutter layers, so the project lists them in its `.clean_arch_ignore` (SKILL.md → "Automated linting")
+and the linter skips them:
+
+```
+lib/core/presentation/dto
+lib/core/presentation/routes
+lib/features/*/presentation/dto
+lib/features/*/presentation/middleware
+lib/features/*/presentation/routes
+```
+
 ## Rules
 
 1. **Routes translate, use cases decide.** A handler reads the request (shape only: is it JSON, is `text` a
    string), calls one use case, answers with `result.when(success: _xResponse, failure: JsonResponses.failure)`.
 2. **Routes get use cases as functions** through the constructor, like controllers — `watchNotes: watchNotesUseCase.call`.
-   They never import getters, use cases, repositories or DI (linter: `import_violation`), so a test builds them
+   They never import getters, use cases, repositories or DI, so a test builds them
    with plain functions.
 3. **Only `api_server_di.dart` knows the other features**: it builds the routes with their getters and hands
    them to the data source as Relic `RouterInjectable`s. Register `registerAndInitApiServer()` after the features it serves.
