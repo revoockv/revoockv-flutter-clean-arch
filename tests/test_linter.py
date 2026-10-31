@@ -663,6 +663,59 @@ class FolderNamingTest(unittest.TestCase):
         self.assertIn(("result.dart", "folder_naming", 0), found)
 
 
+class ServingHttpTest(unittest.TestCase):
+    SERVING = "features/api_server/presentation/"
+
+    def test_serving_folders_are_optional_and_need_suffixes(self):
+        files = {
+            self.SERVING + "routes/notes_routes.dart": "",
+            self.SERVING + "routes/helpers.dart": "",
+            self.SERVING + "dto/note_dto.dart": "",
+            self.SERVING + "dto/note.dart": "",
+            self.SERVING + "middleware/api_token_middleware.dart": "",
+            self.SERVING + "middleware/token.dart": "",
+        }
+        found = run(files, {"naming_file"})
+        self.assertEqual(sorted(name for name, _, _ in found), ["helpers.dart", "note.dart", "token.dart"])
+        folders = run(files, {"folder_naming"})
+        self.assertFalse([f for f in folders if "unexpected subfolder" in str(f)])
+
+    def test_unknown_presentation_folder_is_still_a_violation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            lib = Path(tmp) / "lib"
+            for sub in ("pages", "widgets", "di", "controllers", "routes", "handlers"):
+                (lib / "features/api_server/presentation" / sub).mkdir(parents=True)
+            (lib / "features/api_server/presentation/handlers/x.dart").write_text("")
+            with contextlib.redirect_stdout(io.StringIO()):
+                report = linter.analyze(str(lib), {"folder_naming"}, json_output=True)
+            messages = [v.message for r in report.results for v in r.violations]
+        self.assertTrue(any("'handlers/'" in m for m in messages), messages)
+        self.assertFalse(any("'routes/'" in m for m in messages), messages)
+
+    def test_routes_take_use_cases_as_functions_not_from_getters(self):
+        code = """
+            import 'package:example_app/features/notes/domain/entities/note.dart';
+            import 'package:example_app/features/notes/presentation/di/notes_getters.dart';
+            import 'package:example_app/features/notes/domain/use_cases/add_note_use_case.dart';
+            import 'package:watch_it/watch_it.dart';
+        """
+        found = run({self.SERVING + "routes/notes_routes.dart": code}, {"import_violation"})
+        self.assertEqual([line for _, _, line in found], [3, 4, 5])
+
+    def test_relic_and_rxdart_only_with_show(self):
+        code = """
+            import 'package:relic/relic.dart';
+            import 'package:relic/relic.dart' show Request, Response;
+            import 'package:rxdart/rxdart.dart';
+            import 'package:relic/relic.dart'
+                show
+                    RelicRouter,
+                    RouterInjectable;
+        """
+        found = run({self.SERVING + "routes/notes_routes.dart": code}, {"show_imports"})
+        self.assertEqual([line for _, _, line in found], [2, 4])
+
+
 class ExampleAppTest(unittest.TestCase):
     def test_example_app_has_no_violations(self):
         with contextlib.redirect_stdout(io.StringIO()):

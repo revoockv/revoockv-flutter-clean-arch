@@ -84,6 +84,7 @@ ALL_RULES = {
     "theme_import",
     "value_listenable_exposure",
     "watch_order",
+    "show_imports",
 }
 
 # Files ignored by default (generated/config files that should not be linted)
@@ -102,6 +103,12 @@ CALLBACK_PROPERTIES = {
     "onSelected", "onDeleted", "onLoaded", "onError", "onResult",
     "onValueChange", "onAnimationComplete", "onDismissed", "onEnded",
 }
+
+# Optional presentation folders of a feature that serves HTTP, with the file suffix each requires
+SERVING_FOLDERS = {"routes": "_routes.dart", "dto": "_dto.dart", "middleware": "_middleware.dart"}
+
+# Packages imported only with `show` (relic exports its own Result and Logger)
+SHOW_PACKAGES = ("package:relic/", "package:relic_core/", "package:relic_io/", "package:rxdart/")
 
 # Patterns that indicate presentation layer files
 PRESENTATION_PATH_PATTERNS = [r"presentation/"]
@@ -236,6 +243,8 @@ def _is_in_widgets_folder(file_path: str) -> bool:
     return bool(re.search(r'widgets/', file_path))
 def _is_in_controllers_folder(file_path: str) -> bool:
     return bool(re.search(r'controllers/', file_path))
+def _is_in_serving_folder(file_path: str) -> bool:
+    return any(f"/presentation/{folder}/" in file_path for folder in SERVING_FOLDERS)
 def _is_in_di_folder(file_path: str) -> bool:
     return bool(re.search(r'/di/', file_path))
 def _is_private_widget_class(content: str) -> bool:
@@ -310,8 +319,16 @@ def check_naming_file(result: AnalysisResult) -> None:
             message=f"Controller file '{basename}' must end with _controller.dart (or _state.dart for its state class)",
         ))
 
+    # Serving files of a feature: routes, DTOs, middleware
+    for folder, suffix in SERVING_FOLDERS.items():
+        if "/features/" in fp and f"/presentation/{folder}/" in fp and not basename.endswith(suffix):
+            result.violations.append(Violation(
+                file=fp, line=0, rule="naming_file",
+                message=f"File '{basename}' in presentation/{folder}/ must end with {suffix}",
+            ))
+
     # DI files
-    if "di/" in fp:
+    if "/di/" in fp:
         if "_di.dart" not in basename and "_getters.dart" not in basename:
             result.violations.append(Violation(
                 file=fp, line=0, rule="naming_file",
@@ -840,6 +857,15 @@ def check_import_violation(result: AnalysisResult) -> None:
         if not (stripped.startswith("import ") or stripped.startswith("export ")):
             continue
 
+        # Routes, DTOs and middleware are self-contained like controllers: use cases come in as constructor functions
+        if _is_in_serving_folder(result.file) and re.search(r"(?:['/]di/|_getters\.dart|package:(?:get_it|watch_it)/)", stripped):
+            result.violations.append(Violation(
+                file=result.file, line=i, rule="import_violation",
+                message="Routes, DTOs and middleware must not import getters or DI — take use cases as constructor functions",
+                snippet=_line_at(content, i),
+            ))
+            continue
+
         # Controllers are self-contained: use cases come in as method parameters
         if _is_in_controllers_folder(result.file) and re.search(r"(?:['/]di/|_getters\.dart|package:(?:get_it|watch_it)/)", stripped):
             result.violations.append(Violation(
@@ -872,6 +898,17 @@ def check_import_violation(result: AnalysisResult) -> None:
                 file=result.file, line=i, rule="import_violation",
                 message=f"Presentation layer must not import use cases directly — use <feature>_getters.dart",
                 snippet=_line_at(content, i),
+            ))
+def check_show_imports(result: AnalysisResult) -> None:
+    """relic and rxdart are imported only with `show`: relic exports its own `Result` and `Logger`."""
+    content = _read_file(Path(result.file))
+    for m in re.finditer(r"^[ \t]*import\s+['\"]([^'\"]+)['\"]([^;]*);", content, re.M | re.S):
+        if m.group(1).startswith(SHOW_PACKAGES) and not re.search(r"\bshow\b", m.group(2)):
+            line = content.count("\n", 0, m.start()) + 1
+            result.violations.append(Violation(
+                file=result.file, line=line, rule="show_imports",
+                message=f"Import '{m.group(1)}' with `show <Names>` (name the extensions too, e.g. PathParametersRequestEx)",
+                snippet=_line_at(content, line),
             ))
 def check_setstate_usage(result: AnalysisResult) -> None:
     """Check for setState() calls."""
@@ -1576,6 +1613,8 @@ def check_folder_naming(result: AnalysisResult) -> None:
         "di",
         "controllers",
     }
+    # Only a feature that serves HTTP has them (references/serving_http.md)
+    optional_presentation_subfolders = set(SERVING_FOLDERS)
 
     # Scan the feature root for actual subfolders
     feature_path = Path(feature_root)
@@ -1624,7 +1663,7 @@ def check_folder_naming(result: AnalysisResult) -> None:
     if presentation_folder.is_dir():
         actual_pres_sub = {d.name for d in presentation_folder.iterdir() if d.is_dir()}
         missing = expected_presentation_subfolders - actual_pres_sub
-        extra = actual_pres_sub - expected_presentation_subfolders
+        extra = actual_pres_sub - expected_presentation_subfolders - optional_presentation_subfolders
 
         for sub in missing:
             result.violations.append(Violation(
@@ -1634,7 +1673,7 @@ def check_folder_naming(result: AnalysisResult) -> None:
         for sub in extra:
             result.violations.append(Violation(
                 file=fp, line=0, rule="folder_naming",
-                message=f"Feature '{feature_name}' presentation/ has unexpected subfolder '{sub}/' — expected one of {sorted(expected_presentation_subfolders)}",
+                message=f"Feature '{feature_name}' presentation/ has unexpected subfolder '{sub}/' — expected one of {sorted(expected_presentation_subfolders)} (optional: {sorted(optional_presentation_subfolders)})",
             ))
 
     # Mark this feature root as reported
@@ -2304,6 +2343,7 @@ CHECKERS = {
     "static_const_in_state_class": check_static_const_in_state_class,
     "magic_numbers_in_layout": check_magic_numbers_in_layout,
     "theme_import": check_theme_import,
+    "show_imports": check_show_imports,
     "value_listenable_exposure": check_value_listenable_exposure,
     "watch_order": check_watch_order,
 }
@@ -2428,6 +2468,7 @@ Rules (comma-separated, or 'all' for all):
     static_const_in_state_class — static const of a stateful widget in its State class
     magic_numbers_in_layout — numbers in EdgeInsets/Size/Offset/Color must be static const
     theme_import       — shared values in lib/core/presentation/theme.dart
+    show_imports       — relic and rxdart only with `show` (relic exports its own Result and Logger)
 
 Default ignored files: firebase_options.dart (cannot be disabled)
 
