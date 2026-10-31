@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.8.0] - 2026-10-31
+
+### Added — Serving use cases over HTTP
+- New `references/serving_http.md`: an `api_server` feature serves the use cases of other features to devices on the
+  same network with Relic — routes over the use cases (taken as functions, like controllers), a token middleware
+  (`Authorization: Bearer`, 256-bit token, constant-time check), off by default, stopped on `dispose()`.
+- Example app: the `api_server` feature (state, start / stop / check token use cases, `RelicApiServerDataSource`,
+  `NotesRoutes`, switch page behind the Wi-Fi button of the notes page) and core JSON helpers
+  (`JsonResponses`, `JsonRequests`, `ErrorDto`), with repository, routes (real server on port 0) and page tests.
+- Linter: optional presentation folders `routes/`, `dto/`, `middleware/` (files `*_routes.dart`, `*_dto.dart`,
+  `*_middleware.dart`); routes, DTOs and middleware must not import getters or DI; new rule `show_imports`
+  (relic and rxdart only with `show`) — 29 rules.
+- `check_versions.py` tracks `relic`; `selfcheck.py` compares the `api_server` code of the docs with the example.
+
 ## [0.7.0] - 2026-10-29
 
 ### Changed (breaking) — State and controllers

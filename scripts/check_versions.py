@@ -26,7 +26,7 @@ PUBSPEC = SKILL_ROOT / "assets" / "example_app" / "pubspec.yaml"
 DOC_FILES = [SKILL_ROOT / "SKILL.md", *sorted((SKILL_ROOT / "references").glob("*.md"))]
 
 # Packages whose versions the skill prescribes
-TRACKED = ("get_it", "watch_it", "logger", "uuid", "flutter_lints")
+TRACKED = ("get_it", "watch_it", "logger", "relic", "uuid", "flutter_lints")
 
 PUB_API = "https://pub.dev/api/packages/{name}"
 CONSTRAINT = r"(^\s*{name}:\s*\^)(\d+\.\d+\.\d+)"
