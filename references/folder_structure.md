@@ -44,7 +44,7 @@ The `folder_naming` linter rule enforces this for both features and `core/`: **e
       - `<feature>_getters.dart` — top-level getters for use cases
       - `<subfeature>_di.dart` — optional subfeature DI
     - `controllers/` — UI controllers, only when the feature has UI logic (loading flags, errors of actions, form state); otherwise empty with `.gitkeep`
-    - optional, only in a feature that serves HTTP (`references/serving_http.md`) — not required, created only when used:
+    - optional, only in a feature that serves HTTP (`references/serving_http.md`) — not required, created only when used; listed in the project's `.clean_arch_ignore`, so `folder_naming` skips them:
       - `routes/` — `RouterInjectable` classes with the handlers (`*_routes.dart`)
       - `dto/` — API formats of requests and responses (`*_dto.dart`)
       - `middleware/` — Relic middleware, e.g. the token check (`*_middleware.dart`)

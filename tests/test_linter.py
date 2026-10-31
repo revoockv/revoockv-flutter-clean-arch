@@ -663,59 +663,6 @@ class FolderNamingTest(unittest.TestCase):
         self.assertIn(("result.dart", "folder_naming", 0), found)
 
 
-class ServingHttpTest(unittest.TestCase):
-    SERVING = "features/api_server/presentation/"
-
-    def test_serving_folders_are_optional_and_need_suffixes(self):
-        files = {
-            self.SERVING + "routes/notes_routes.dart": "",
-            self.SERVING + "routes/helpers.dart": "",
-            self.SERVING + "dto/note_dto.dart": "",
-            self.SERVING + "dto/note.dart": "",
-            self.SERVING + "middleware/api_token_middleware.dart": "",
-            self.SERVING + "middleware/token.dart": "",
-        }
-        found = run(files, {"naming_file"})
-        self.assertEqual(sorted(name for name, _, _ in found), ["helpers.dart", "note.dart", "token.dart"])
-        folders = run(files, {"folder_naming"})
-        self.assertFalse([f for f in folders if "unexpected subfolder" in str(f)])
-
-    def test_unknown_presentation_folder_is_still_a_violation(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            lib = Path(tmp) / "lib"
-            for sub in ("pages", "widgets", "di", "controllers", "routes", "handlers"):
-                (lib / "features/api_server/presentation" / sub).mkdir(parents=True)
-            (lib / "features/api_server/presentation/handlers/x.dart").write_text("")
-            with contextlib.redirect_stdout(io.StringIO()):
-                report = linter.analyze(str(lib), {"folder_naming"}, json_output=True)
-            messages = [v.message for r in report.results for v in r.violations]
-        self.assertTrue(any("'handlers/'" in m for m in messages), messages)
-        self.assertFalse(any("'routes/'" in m for m in messages), messages)
-
-    def test_routes_take_use_cases_as_functions_not_from_getters(self):
-        code = """
-            import 'package:example_app/features/notes/domain/entities/note.dart';
-            import 'package:example_app/features/notes/presentation/di/notes_getters.dart';
-            import 'package:example_app/features/notes/domain/use_cases/add_note_use_case.dart';
-            import 'package:watch_it/watch_it.dart';
-        """
-        found = run({self.SERVING + "routes/notes_routes.dart": code}, {"import_violation"})
-        self.assertEqual([line for _, _, line in found], [3, 4, 5])
-
-    def test_relic_and_rxdart_only_with_show(self):
-        code = """
-            import 'package:relic/relic.dart';
-            import 'package:relic/relic.dart' show Request, Response;
-            import 'package:rxdart/rxdart.dart';
-            import 'package:relic/relic.dart'
-                show
-                    RelicRouter,
-                    RouterInjectable;
-        """
-        found = run({self.SERVING + "routes/notes_routes.dart": code}, {"show_imports"})
-        self.assertEqual([line for _, _, line in found], [2, 4])
-
-
 class FunctionTypeFieldTest(unittest.TestCase):
     def test_multiline_function_type_field_is_not_a_method(self):
         code = """
@@ -732,6 +679,72 @@ class FunctionTypeFieldTest(unittest.TestCase):
             }
         """
         self.assertEqual(run({"features/a/presentation/routes/lore_routes.dart": code}, {"dartdoc_public"}), [])
+
+
+class IgnorePathsTest(unittest.TestCase):
+    """Folders listed in .clean_arch_ignore (global, local) or --ignore-paths are not seen by the linter."""
+
+    FILES = {
+        "pubspec.yaml": "name: app\n",
+        "lib/features/a/data/data_sources/.gitkeep": "",
+        "lib/features/a/data/models/.gitkeep": "",
+        "lib/features/a/data/repositories/.gitkeep": "",
+        "lib/features/a/domain/entities/.gitkeep": "",
+        "lib/features/a/domain/repositories/.gitkeep": "",
+        "lib/features/a/domain/use_cases/.gitkeep": "",
+        "lib/features/a/presentation/pages/a_page.dart": "/// A.\nfinal class APage {}\n",
+        "lib/features/a/presentation/widgets/.gitkeep": "",
+        "lib/features/a/presentation/di/.gitkeep": "",
+        "lib/features/a/presentation/controllers/.gitkeep": "",
+        "lib/features/a/presentation/routes/notes.dart": "final class Notes {}\n",
+    }
+
+    def setUp(self):
+        self._global = linter.GLOBAL_IGNORE_FILE
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        linter.GLOBAL_IGNORE_FILE = self.root / "skill" / ".clean_arch_ignore"
+        for rel, code in self.FILES.items():
+            path = self.root / "app" / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(code, encoding="utf-8")
+
+    def tearDown(self):
+        linter.GLOBAL_IGNORE_FILE = self._global
+        self.tmp.cleanup()
+
+    def lint(self, target: str = "lib", **kwargs) -> list[tuple[str, str]]:
+        with contextlib.redirect_stdout(io.StringIO()):
+            report = linter.analyze(str(self.root / "app" / target), {"folder_naming", "naming_file", "dartdoc_public"},
+                                    json_output=True, **kwargs)
+        return sorted({(Path(r.file).name, v.rule) for r in report.results for v in r.violations})
+
+    def test_not_ignored_folder_is_reported(self):
+        found = self.lint()
+        self.assertIn(("notes.dart", "dartdoc_public"), found)
+        self.assertTrue(any(rule == "folder_naming" for _, rule in found))
+
+    def test_local_ignore_file_with_glob_and_comment(self):
+        (self.root / "app" / ".clean_arch_ignore").write_text(
+            "# server folders\n\nlib/features/*/presentation/routes/  # trailing slash and comment\n", encoding="utf-8")
+        self.assertEqual(self.lint(), [])
+
+    def test_global_ignore_file(self):
+        linter.GLOBAL_IGNORE_FILE.parent.mkdir(parents=True)
+        linter.GLOBAL_IGNORE_FILE.write_text("lib/features/a/presentation/routes\n", encoding="utf-8")
+        self.assertEqual(self.lint(), [])
+
+    def test_cli_paths_and_feature_target(self):
+        self.assertEqual(self.lint("lib/features/a", ignore_paths=["./lib/features/a/presentation/routes"]), [])
+
+    def test_ignored_file_is_not_counted(self):
+        with contextlib.redirect_stdout(io.StringIO()):
+            report = linter.analyze(str(self.root / "app" / "lib"), {"dartdoc_public"}, json_output=True,
+                                    ignore_paths=["lib/features/a/presentation/routes/notes.dart"])
+        self.assertEqual(report.total_files, 1)
+
+    def test_prefix_of_a_name_is_not_a_match(self):
+        self.assertIn(("notes.dart", "dartdoc_public"), self.lint(ignore_paths=["lib/features/a/presentation/rout"]))
 
 
 class ExampleAppTest(unittest.TestCase):

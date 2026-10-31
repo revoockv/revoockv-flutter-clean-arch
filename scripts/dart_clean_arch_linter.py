@@ -39,11 +39,19 @@ Rules (all enabled by default):
     theme_import       — values shared by features live in lib/core/presentation/theme.dart (AppTheme)
 Default ignored files (cannot be disabled): firebase_options.dart
 
+Ignored paths (folders or files the linter does not see at all — not linted, not counted by folder_naming):
+  <skill>/.clean_arch_ignore     global, for every project
+  <project>/.clean_arch_ignore   local, next to pubspec.yaml
+  --ignore-paths <path> ...      for one run
+One path per line, relative to the project root (`lib/features/api_server/presentation/routes`),
+globs allowed (`lib/features/*/presentation/dto`), `#` starts a comment.
+
 """
 
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import json
 import os
 import re
@@ -52,7 +60,7 @@ from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from typing import Sequence
 
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 # ── Rule definitions ────────────────────────────────────────────────
 
 ALL_RULES = {
@@ -84,13 +92,85 @@ ALL_RULES = {
     "theme_import",
     "value_listenable_exposure",
     "watch_order",
-    "show_imports",
 }
 
 # Files ignored by default (generated/config files that should not be linted)
+# Ignored paths: global file in the skill, local file in the project root
+IGNORE_FILE_NAME = ".clean_arch_ignore"
+GLOBAL_IGNORE_FILE = Path(__file__).resolve().parent.parent / IGNORE_FILE_NAME
+
 DEFAULT_IGNORE_FILES = [
     "firebase_options.dart",
 ]
+
+
+def _read_ignore_file(path: Path) -> list[str]:
+    """Patterns of an ignore file: one per line, `#` comments and blank lines skipped."""
+    if not path.is_file():
+        return []
+    return [line.split("#", 1)[0] for line in path.read_text(encoding="utf-8").splitlines()]
+
+
+def _normalize_pattern(pattern: str) -> str:
+    """`./lib/x/` → `lib/x`; blank stays blank."""
+    pattern = pattern.strip()
+    while pattern.startswith("./"):
+        pattern = pattern[2:]
+    return pattern.strip("/")
+
+
+def _find_project_root(path: Path) -> Path:
+    """The nearest folder with pubspec.yaml above [path]; else the folder holding `lib/`; else [path]."""
+    path = path.resolve()
+    start = path if path.is_dir() else path.parent
+    for folder in (start, *start.parents):
+        if (folder / "pubspec.yaml").is_file():
+            return folder
+    for folder in (start, *start.parents):
+        if folder.name == "lib":
+            return folder.parent
+    return start
+
+
+class IgnoredPaths:
+    """Folders and files of a project the linter skips entirely."""
+
+    def __init__(self, root: Path, patterns: Sequence[str]):
+        self.root = root.resolve()
+        self.patterns = [p for p in map(_normalize_pattern, patterns) if p]
+
+    @classmethod
+    def for_target(cls, target: str, extra: Sequence[str] | None = None) -> "IgnoredPaths":
+        root = _find_project_root(Path(target))
+        patterns = _read_ignore_file(GLOBAL_IGNORE_FILE) + _read_ignore_file(root / IGNORE_FILE_NAME)
+        return cls(root, patterns + list(extra or []))
+
+    def matches(self, path: Path | str) -> bool:
+        """True when [path] or one of its parent folders (inside the project) matches a pattern."""
+        if not self.patterns:
+            return False
+        try:
+            rel = Path(path).resolve().relative_to(self.root).as_posix()
+        except ValueError:
+            return False
+        parts = rel.split("/")
+        prefixes = ["/".join(parts[: k + 1]) for k in range(len(parts))]
+        return any(prefix == pat or fnmatch.fnmatchcase(prefix, pat)
+                   for pat in self.patterns for prefix in prefixes)
+
+
+# Set by analyze() for the current run
+_ignored = IgnoredPaths(Path.cwd(), [])
+
+
+def _subfolders(folder: Path) -> set[str]:
+    """Names of the subfolders of [folder] that are not ignored."""
+    return {d.name for d in folder.iterdir() if d.is_dir() and not _ignored.matches(d)}
+
+
+def _dart_files_under(root: str) -> list[Path]:
+    """Every .dart file under [root] that is not ignored."""
+    return [f for f in Path(root).rglob("*.dart") if not _ignored.matches(f)]
 
 # Numbers allowed without static const
 ALLOWED_NUMBERS = {-1, 0, 1, 2}
@@ -103,12 +183,6 @@ CALLBACK_PROPERTIES = {
     "onSelected", "onDeleted", "onLoaded", "onError", "onResult",
     "onValueChange", "onAnimationComplete", "onDismissed", "onEnded",
 }
-
-# Optional presentation folders of a feature that serves HTTP, with the file suffix each requires
-SERVING_FOLDERS = {"routes": "_routes.dart", "dto": "_dto.dart", "middleware": "_middleware.dart"}
-
-# Packages imported only with `show` (relic exports its own Result and Logger)
-SHOW_PACKAGES = ("package:relic/", "package:relic_core/", "package:relic_io/", "package:rxdart/")
 
 # Patterns that indicate presentation layer files
 PRESENTATION_PATH_PATTERNS = [r"presentation/"]
@@ -243,8 +317,6 @@ def _is_in_widgets_folder(file_path: str) -> bool:
     return bool(re.search(r'widgets/', file_path))
 def _is_in_controllers_folder(file_path: str) -> bool:
     return bool(re.search(r'controllers/', file_path))
-def _is_in_serving_folder(file_path: str) -> bool:
-    return any(f"/presentation/{folder}/" in file_path for folder in SERVING_FOLDERS)
 def _is_in_di_folder(file_path: str) -> bool:
     return bool(re.search(r'/di/', file_path))
 def _is_private_widget_class(content: str) -> bool:
@@ -319,16 +391,8 @@ def check_naming_file(result: AnalysisResult) -> None:
             message=f"Controller file '{basename}' must end with _controller.dart (or _state.dart for its state class)",
         ))
 
-    # Serving files of a feature: routes, DTOs, middleware
-    for folder, suffix in SERVING_FOLDERS.items():
-        if "/features/" in fp and f"/presentation/{folder}/" in fp and not basename.endswith(suffix):
-            result.violations.append(Violation(
-                file=fp, line=0, rule="naming_file",
-                message=f"File '{basename}' in presentation/{folder}/ must end with {suffix}",
-            ))
-
     # DI files
-    if "/di/" in fp:
+    if "di/" in fp:
         if "_di.dart" not in basename and "_getters.dart" not in basename:
             result.violations.append(Violation(
                 file=fp, line=0, rule="naming_file",
@@ -857,15 +921,6 @@ def check_import_violation(result: AnalysisResult) -> None:
         if not (stripped.startswith("import ") or stripped.startswith("export ")):
             continue
 
-        # Routes, DTOs and middleware are self-contained like controllers: use cases come in as constructor functions
-        if _is_in_serving_folder(result.file) and re.search(r"(?:['/]di/|_getters\.dart|package:(?:get_it|watch_it)/)", stripped):
-            result.violations.append(Violation(
-                file=result.file, line=i, rule="import_violation",
-                message="Routes, DTOs and middleware must not import getters or DI — take use cases as constructor functions",
-                snippet=_line_at(content, i),
-            ))
-            continue
-
         # Controllers are self-contained: use cases come in as method parameters
         if _is_in_controllers_folder(result.file) and re.search(r"(?:['/]di/|_getters\.dart|package:(?:get_it|watch_it)/)", stripped):
             result.violations.append(Violation(
@@ -898,17 +953,6 @@ def check_import_violation(result: AnalysisResult) -> None:
                 file=result.file, line=i, rule="import_violation",
                 message=f"Presentation layer must not import use cases directly — use <feature>_getters.dart",
                 snippet=_line_at(content, i),
-            ))
-def check_show_imports(result: AnalysisResult) -> None:
-    """relic and rxdart are imported only with `show`: relic exports its own `Result` and `Logger`."""
-    content = _read_file(Path(result.file))
-    for m in re.finditer(r"^[ \t]*import\s+['\"]([^'\"]+)['\"]([^;]*);", content, re.M | re.S):
-        if m.group(1).startswith(SHOW_PACKAGES) and not re.search(r"\bshow\b", m.group(2)):
-            line = content.count("\n", 0, m.start()) + 1
-            result.violations.append(Violation(
-                file=result.file, line=line, rule="show_imports",
-                message=f"Import '{m.group(1)}' with `show <Names>` (name the extensions too, e.g. PathParametersRequestEx)",
-                snippet=_line_at(content, line),
             ))
 def check_setstate_usage(result: AnalysisResult) -> None:
     """Check for setState() calls."""
@@ -1127,7 +1171,7 @@ def _state_classes(lib_root: str | None) -> set[str]:
     if lib_root in _state_classes_cache:
         return _state_classes_cache[lib_root]
     parents: dict[str, set[str]] = {}
-    for dart_file in Path(lib_root).rglob("*.dart"):
+    for dart_file in _dart_files_under(lib_root):
         code, _ = _scan_dart(_read_file(dart_file))
         for m in re.finditer(r'\bclass\s+(\w+)[^{;]*?\{', code):
             header = m.group(0)
@@ -1615,8 +1659,6 @@ def check_folder_naming(result: AnalysisResult) -> None:
         "di",
         "controllers",
     }
-    # Only a feature that serves HTTP has them (references/serving_http.md)
-    optional_presentation_subfolders = set(SERVING_FOLDERS)
 
     # Scan the feature root for actual subfolders
     feature_path = Path(feature_root)
@@ -1626,7 +1668,7 @@ def check_folder_naming(result: AnalysisResult) -> None:
     # Check data/ subfolders
     data_folder = feature_path / "data"
     if data_folder.is_dir():
-        actual_data_sub = {d.name for d in data_folder.iterdir() if d.is_dir()}
+        actual_data_sub = _subfolders(data_folder)
         missing = expected_subfolders - actual_data_sub
         extra = actual_data_sub - expected_subfolders
 
@@ -1645,7 +1687,7 @@ def check_folder_naming(result: AnalysisResult) -> None:
     # Check domain/ subfolders
     domain_folder = feature_path / "domain"
     if domain_folder.is_dir():
-        actual_domain_sub = {d.name for d in domain_folder.iterdir() if d.is_dir()}
+        actual_domain_sub = _subfolders(domain_folder)
         missing = expected_domain_subfolders - actual_domain_sub
         extra = actual_domain_sub - expected_domain_subfolders
 
@@ -1663,9 +1705,9 @@ def check_folder_naming(result: AnalysisResult) -> None:
     # Check presentation/ subfolders
     presentation_folder = feature_path / "presentation"
     if presentation_folder.is_dir():
-        actual_pres_sub = {d.name for d in presentation_folder.iterdir() if d.is_dir()}
+        actual_pres_sub = _subfolders(presentation_folder)
         missing = expected_presentation_subfolders - actual_pres_sub
-        extra = actual_pres_sub - expected_presentation_subfolders - optional_presentation_subfolders
+        extra = actual_pres_sub - expected_presentation_subfolders
 
         for sub in missing:
             result.violations.append(Violation(
@@ -1675,7 +1717,7 @@ def check_folder_naming(result: AnalysisResult) -> None:
         for sub in extra:
             result.violations.append(Violation(
                 file=fp, line=0, rule="folder_naming",
-                message=f"Feature '{feature_name}' presentation/ has unexpected subfolder '{sub}/' — expected one of {sorted(expected_presentation_subfolders)} (optional: {sorted(optional_presentation_subfolders)})",
+                message=f"Feature '{feature_name}' presentation/ has unexpected subfolder '{sub}/' — expected one of {sorted(expected_presentation_subfolders)}",
             ))
 
     # Mark this feature root as reported
@@ -2259,7 +2301,7 @@ def _const_index(lib_root: str):
                 theme.setdefault((m.group(1), _normalize_value(m.group(3))), f"{class_name}.{m.group(2)}")
 
     private: dict[tuple[str, str, str], set[str]] = {}
-    for dart_file in Path(lib_root).rglob("*.dart"):
+    for dart_file in _dart_files_under(lib_root):
         owner = _owner_of(str(dart_file))
         if owner is None or owner == "core":
             continue
@@ -2345,7 +2387,6 @@ CHECKERS = {
     "static_const_in_state_class": check_static_const_in_state_class,
     "magic_numbers_in_layout": check_magic_numbers_in_layout,
     "theme_import": check_theme_import,
-    "show_imports": check_show_imports,
     "value_listenable_exposure": check_value_listenable_exposure,
     "watch_order": check_watch_order,
 }
@@ -2355,13 +2396,16 @@ def _collect_dart_files(path: str) -> list[Path]:
     if p.is_file():
         return [p] if p.suffix == ".dart" else []
     return sorted(p.rglob("*.dart"))
-def analyze(path: str, rules: set[str], json_output: bool = False, ignore_files: list[str] | None = None) -> AnalysisReport:
+def analyze(path: str, rules: set[str], json_output: bool = False, ignore_files: list[str] | None = None,
+            ignore_paths: list[str] | None = None) -> AnalysisReport:
     """Analyze Dart files and return a report."""
+    global _ignored
+    _ignored = IgnoredPaths.for_target(path, ignore_paths)
     # Reset per-run state for folder_naming dedup
     _folder_naming_reported.clear()
     _const_index_cache.clear()
 
-    dart_files = _collect_dart_files(path)
+    dart_files = [f for f in _collect_dart_files(path) if not _ignored.matches(f)]
 
     report = AnalysisReport(rules_enabled=rules)
     report.total_files = len(dart_files)
@@ -2470,9 +2514,11 @@ Rules (comma-separated, or 'all' for all):
     static_const_in_state_class — static const of a stateful widget in its State class
     magic_numbers_in_layout — numbers in EdgeInsets/Size/Offset/Color must be static const
     theme_import       — shared values in lib/core/presentation/theme.dart
-    show_imports       — relic and rxdart only with `show` (relic exports its own Result and Logger)
 
 Default ignored files: firebase_options.dart (cannot be disabled)
+
+Ignored paths (skipped entirely, also by folder_naming), relative to the project root, globs allowed:
+    <skill>/.clean_arch_ignore (global), <project>/.clean_arch_ignore (local), --ignore-paths (one run)
 
 Examples:
     python scripts/dart_clean_arch_linter.py lib/features/song
@@ -2480,6 +2526,7 @@ Examples:
     python scripts/dart_clean_arch_linter.py lib/features/song --json
     python scripts/dart_clean_arch_linter.py lib/features/song --strict
     python scripts/dart_clean_arch_linter.py lib/features/auth --ignore-files firebase_options.dart
+    python scripts/dart_clean_arch_linter.py --ignore-paths lib/features/api_server/presentation/routes
          """,
     )
     parser.add_argument("path", nargs="?", default="lib", help="Path to Dart files or directory (default: whole project lib)")
@@ -2488,6 +2535,7 @@ Examples:
     parser.add_argument("--strict", action="store_true", help="Exit with code 1 on any violation")
     parser.add_argument("--ignore", nargs="*", help="Rules to ignore (comma-separated per arg)")
     parser.add_argument("--ignore-files", nargs="*", help="File patterns to skip entirely (glob or substring)")
+    parser.add_argument("--ignore-paths", nargs="*", help="Project folders/files to skip entirely, relative to the project root (globs allowed); added to .clean_arch_ignore")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
 
     args = parser.parse_args()
@@ -2507,7 +2555,7 @@ Examples:
         print(f"Error: path '{path}' does not exist", file=sys.stderr)
         sys.exit(1)
 
-    report = analyze(path, rules, args.json, args.ignore_files)
+    report = analyze(path, rules, args.json, args.ignore_files, args.ignore_paths)
 
     if args.strict and report.has_violations:
         sys.exit(1)
