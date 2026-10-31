@@ -716,6 +716,24 @@ class ServingHttpTest(unittest.TestCase):
         self.assertEqual([line for _, _, line in found], [2, 4])
 
 
+class FunctionTypeFieldTest(unittest.TestCase):
+    def test_multiline_function_type_field_is_not_a_method(self):
+        code = """
+            /// Routes.
+            final class LoreRoutes {
+              final Future<Result<List<Passage>>> Function({
+                required String query,
+                int limit,
+              })
+              _findPassages;
+
+              /// Creates the routes.
+              const LoreRoutes({required this._findPassages});
+            }
+        """
+        self.assertEqual(run({"features/a/presentation/routes/lore_routes.dart": code}, {"dartdoc_public"}), [])
+
+
 class ExampleAppTest(unittest.TestCase):
     def test_example_app_has_no_violations(self):
         with contextlib.redirect_stdout(io.StringIO()):

@@ -1081,6 +1081,8 @@ def check_dartdoc_public(result: AnalysisResult) -> None:
         d = _DECLARATION.match(re.sub(r'\bFunction\s*(?:<[^>]*>)?\s*\([^()]*\)\??', 'Fn', stripped))
         if not d or d.group("name") in _NOT_DECLARATION:
             continue
+        if d.group("name") == "Function":
+            continue  # a field of a function type split over lines: `final Future<X> Function({`
         name, named = d.group("name"), d.group("named")
         is_constructor = bool(class_name) and name == class_name
         if not (d.group("type") or d.group("accessor") or is_constructor or "factory" in d.group("mods")):
