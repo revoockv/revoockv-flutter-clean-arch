@@ -1,5 +1,6 @@
 import 'package:example_app/core/domain/entities/result_state.dart';
 import 'package:example_app/core/presentation/theme.dart';
+import 'package:example_app/features/api_server/presentation/pages/api_server_page.dart';
 import 'package:flutter/material.dart';
 import 'package:watch_it/watch_it.dart';
 
@@ -16,6 +17,9 @@ final class NotesPage extends WatchingWidget {
   /// Title of the app bar.
   static const String _title = 'Notes';
 
+  /// Tooltip of the button that opens the API server settings.
+  static const String _apiServerTooltip = 'API server';
+
   /// Creates the page.
   const NotesPage({super.key});
 
@@ -25,7 +29,16 @@ final class NotesPage extends WatchingWidget {
     registerHandler(target: controller, handler: _onActionChanged);
 
     return Scaffold(
-      appBar: AppBar(title: const Text(_title)),
+      appBar: AppBar(
+        title: const Text(_title),
+        actions: <Widget>[
+          IconButton(
+            icon: const Icon(Icons.wifi_tethering),
+            tooltip: _apiServerTooltip,
+            onPressed: () => _openApiServer(context),
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(AppTheme.spacingMedium),
         child: Column(
@@ -43,6 +56,10 @@ final class NotesPage extends WatchingWidget {
       NotesController(add: addNoteUseCase.call, delete: deleteNoteUseCase.call);
 
   static void _disposeController(NotesController controller) => controller.dispose();
+
+  void _openApiServer(BuildContext context) {
+    ApiServerPage.show(context);
+  }
 
   void _onActionChanged(BuildContext context, ResultState<void> state, void Function() cancel) {
     if (state is! FailureResultState<void>) return;

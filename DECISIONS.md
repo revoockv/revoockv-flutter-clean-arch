@@ -75,6 +75,7 @@ without reading all references in full.
 | Know that deepest widgets must be dumb | `SKILL.md` → "Deepest widgets must be dumb" |
 | Extract magic strings / numbers to `static const` | `SKILL.md` → "Constants — owning class, or core when shared" |
 | Handle `Result<T>` in UI | `references/result.md` |
+| Serve the app's use cases to other devices (HTTP / WebSocket) | an `api_server` feature — `references/serving_http.md` |
 
 ---
 

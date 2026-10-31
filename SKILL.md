@@ -2,7 +2,7 @@
 name: revoockv-flutter-clean-arch
 description: Enforce and implement revoockv's Flutter clean architecture using GetIt + watch_it (ValueNotifier-based reactive state). Use when the user asks to create a new feature, refactor an existing project/feature, migrate from Riverpod/Bloc/streams to watch_it + ValueNotifier, add DI modules per feature/subfeature (register by type + use case getters), create data models (DTO) with mapping to domain entities, or build minimal-rebuild UI with watch(watch<Name>UseCase()).value.
 metadata:
-  version: 0.7.0
+  version: 0.8.0
   author: revoockv
 ---
 
@@ -27,6 +27,8 @@ dependencies:
 dev_dependencies:
   flutter_lints: ^6.0.0
 ```
+
+Only an app that serves its use cases over HTTP adds `relic: ^1.2.0` (`references/serving_http.md`).
 
 The source of truth is `assets/example_app/pubspec.yaml`. Before adding packages to a project, run `python3 <skill_base>/scripts/check_versions.py`: it compares the pins with the latest versions on pub.dev. When something is outdated, tell the user; `--update` bumps the pins in the example and the docs, then `scripts/selfcheck.py` must pass before the new versions are used.
 
@@ -54,6 +56,7 @@ The source of truth is `assets/example_app/pubspec.yaml`. Before adding packages
 - Reactive state: `references/reactive_state_syntax.md` — `watch`, `registerHandler`, the order rule, derived state
 - Testing: `references/testing.md` — what to test on each layer, fakes, widget tests with a test DI per feature and fake data sources
 - Git rules: `references/git_rules.md` — universal branch strategy, commit message format, tagging conventions
+- Serving use cases over HTTP (an `api_server` feature with Relic routes, token middleware, on/off switch): `references/serving_http.md`
 
 ## Quick navigation
 
@@ -88,7 +91,7 @@ python3 <skill_base>/scripts/dart_clean_arch_linter.py --ignore magic_numbers,ma
 
 The `path` positional argument is optional: omit it (or pass `lib`) for the whole project, or pass a single feature folder to narrow the scope. All flag combinations (`--strict`, `--rules`, `--json`, `--ignore`) work with either target.
 
-**28 rules:** `naming_file`, `naming_class`, `magic_numbers`, `magic_strings`, `magic_colors`, `widget_helpers`, `inline_callbacks`, `import_violation`, `setstate_usage`, `stateful_no_lifecycle`, `dartdoc_public`, `no_state_in_di`, `widget_stateless`, `watching_widget`, `no_controller_in_ui`, `static_const_order`, `no_build_return`, `folder_naming`, `async_gap_context_mounted`, `widget_key_parameter`, `controller_lifecycle`, `widget_methods`, `stateless_with_controllers`, `static_const_in_state_class`, `magic_numbers_in_layout`, `theme_import`, `value_listenable_exposure`, `watch_order`.
+**29 rules:** `naming_file`, `naming_class`, `magic_numbers`, `magic_strings`, `magic_colors`, `widget_helpers`, `inline_callbacks`, `import_violation`, `setstate_usage`, `stateful_no_lifecycle`, `dartdoc_public`, `no_state_in_di`, `widget_stateless`, `watching_widget`, `no_controller_in_ui`, `static_const_order`, `no_build_return`, `folder_naming`, `async_gap_context_mounted`, `widget_key_parameter`, `controller_lifecycle`, `widget_methods`, `stateless_with_controllers`, `static_const_in_state_class`, `magic_numbers_in_layout`, `theme_import`, `value_listenable_exposure`, `watch_order`, `show_imports`.
 
 All rules are enabled by default. Only disable a rule with `--ignore` when the user explicitly requests it.
 
