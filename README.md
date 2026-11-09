@@ -45,7 +45,7 @@ The agent follows `SKILL.md` and the references, then runs the linter.
 - **DI:** one `registerAndInit<Feature>()` per feature, registered by type in GetIt; widgets reach use cases only through `<feature>_getters.dart`.
 - **State:** repositories keep a private `ValueNotifier` and expose `ValueListenable<ResultState<T>>`; widgets read it with `watch(watch<Name>UseCase()).value` and `switch` over it.
 - **Results:** actions return `Future<Result<T>>`; failures are human-readable messages, exceptions are logged.
-- **UI controllers:** only for UI logic, portable like `TextEditingController` — no DI inside, use cases passed in through the constructor, owned by a `WatchingWidget` with `createOnce`.
+- **UI controllers:** UI state only, like `TextEditingController` — no DI, no use cases; named `<noun>Controller`; owned by a `WatchingWidget` with `createOnce`, which calls the use cases itself.
 - **Ids:** UUID v4 created in the data source.
 - **Tests:** a test DI per feature with fake data sources; the app code stays as it is.
 - **Conventions:** naming, no magic numbers/strings/colors, Dartdoc on every public declaration, logging, git rules.

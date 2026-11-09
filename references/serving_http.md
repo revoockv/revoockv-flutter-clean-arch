@@ -56,7 +56,8 @@ lib/features/*/presentation/routes
 
 1. **Routes translate, use cases decide.** A handler reads the request (shape only: is it JSON, is `text` a
    string), calls one use case, answers with `result.when(success: _xResponse, failure: JsonResponses.failure)`.
-2. **Routes get use cases as functions** through the constructor, like controllers — `watchNotes: watchNotesUseCase.call`.
+2. **Routes get use cases as functions** through the constructor — closures that call the getter:
+   `watchNotes: () => watchNotesUseCase()`, never a `.call` tear-off.
    They never import getters, use cases, repositories or DI, so a test builds them
    with plain functions.
 3. **Only `api_server_di.dart` knows the other features**: it builds the routes with their getters and hands
@@ -442,7 +443,7 @@ final class NotesRoutes implements RouterInjectable {
 
   final Future<Result<void>> Function(String text) _addNote;
 
-  /// Creates the routes with the use cases they call: `watchNotesUseCase.call`, `addNoteUseCase.call`.
+  /// Creates the routes with the use cases they call: `() => watchNotesUseCase()`, `(text) => addNoteUseCase(text)`.
   const NotesRoutes({required this._watchNotes, required this._addNote});
 
   @override
@@ -553,7 +554,9 @@ void registerAndInitApiServer() {
   // 1. data sources — the routes call the use cases of other features through their getters
   di.registerLazySingleton<ApiServerDataSource>(
     () => RelicApiServerDataSource(
-      routes: <RouterInjectable>[NotesRoutes(watchNotes: watchNotesUseCase.call, addNote: addNoteUseCase.call)],
+      routes: <RouterInjectable>[
+        NotesRoutes(watchNotes: () => watchNotesUseCase(), addNote: (String text) => addNoteUseCase(text)),
+      ],
       middleware: <Middleware>[apiTokenMiddleware(_isTokenValid)],
     ),
     dispose: disposeResource,
@@ -624,7 +627,7 @@ final class ApiServerSwitchWidget extends WatchingWidget {
 
 The `_isTokenValid` function in the DI file is looked up per request on purpose: the data source (with the
 middleware) is built before the repository that `CheckApiTokenUseCase` needs, so an eager
-`checkApiTokenUseCase.call` would create a DI cycle.
+`checkApiTokenUseCase` would create a DI cycle.
 
 ## Tests
 

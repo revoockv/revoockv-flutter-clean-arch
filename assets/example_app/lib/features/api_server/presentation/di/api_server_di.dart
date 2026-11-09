@@ -22,7 +22,9 @@ void registerAndInitApiServer() {
   // 1. data sources — the routes call the use cases of other features through their getters
   di.registerLazySingleton<ApiServerDataSource>(
     () => RelicApiServerDataSource(
-      routes: <RouterInjectable>[NotesRoutes(watchNotes: watchNotesUseCase.call, addNote: addNoteUseCase.call)],
+      routes: <RouterInjectable>[
+        NotesRoutes(watchNotes: () => watchNotesUseCase(), addNote: (String text) => addNoteUseCase(text)),
+      ],
       middleware: <Middleware>[apiTokenMiddleware(_isTokenValid)],
     ),
     dispose: disposeResource,

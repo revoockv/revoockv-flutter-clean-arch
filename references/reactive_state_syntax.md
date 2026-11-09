@@ -165,8 +165,8 @@ final class SongListWidget extends WatchingWidget {
 
 ```dart
 // NotesPage — the owner of a controller only reacts, it never rebuilds
-final NotesController controller = createOnce(_createController, dispose: _disposeController);
-registerHandler(target: controller, handler: _onActionChanged);
+final NotesController notesController = createOnce(_createNotesController, dispose: _disposeNotesController);
+registerHandler(target: notesController.addingStateController, handler: _onActionChanged);
 
 void _onActionChanged(BuildContext context, ResultState<void> state, void Function() cancel) {
   if (state is! FailureResultState<void>) return;
@@ -176,7 +176,7 @@ void _onActionChanged(BuildContext context, ResultState<void> state, void Functi
 
 - `target:` takes the listenable directly — nothing extra goes into GetIt.
 - The handler is a private method `(BuildContext context, T value, void Function() cancel)`: no inline closure, `context` arrives as a parameter, `value` is fully typed. `cancel()` unsubscribes from inside the handler.
-- The same works for a UI controller: `registerHandler(target: controller, handler: _onActionChanged)` — see `references/controllers.md`.
+- The same works for a notifier of a UI controller: `registerHandler(target: notesController.addingStateController, handler: _onActionChanged)` — see `references/controllers.md`.
 - `registerHandler` does not rebuild: put it as high as the reaction needs (the page), and `watch()` as low as possible (the widget that shows the value).
 - **The handler runs only on a change**, not for the value at the first build. When the current value must trigger the reaction too, pass `executeImmediately: true`.
 - **Which screen to show is not a reaction.** "Signed out → sign-in screen" is a `watch` + `switch` over the state that picks the widget (`AuthGateWidget` in `references/feature_template_auth.md`) — no navigation, no routes, and the first state counts.
