@@ -21,8 +21,8 @@ test/features/<feature>/fake_<feature>_data_sources.dart — fake data sources s
 |---|---|---|
 | Domain: use cases | validation, what is passed to the repository, the `Result` | a fake repository (`implements <Feature>Repository`) |
 | Data: repositories | stream → `ValueListenable`, `Result.ok` / human-readable `Result.failure`, `init()` / `dispose()` | an in-memory or a failing data source; `Logger(level: Level.off)` |
-| Presentation: controllers | progress, the recorded error, a second start while busy | plain functions passed instead of use cases — no DI |
-| Presentation: pages | the user flow: tap, type, see the result, see the snackbar, see a load error | a **test DI** of the feature with a fake data source — `registerAndInit<Feature>ForTest(FakeDataSource())` |
+| Presentation: controllers | the UI state: initial values, mode switches, validation, `isDisposed` | nothing — a controller has no dependencies |
+| Presentation: pages | the user flow: tap, type, see the result, see the snackbar, see a load error, a failed save keeps the input | a **test DI** of the feature with a fake data source — `registerAndInit<Feature>ForTest(FakeDataSource())` |
 
 Fakes are plain classes that `implements` the interface — no mocking package is required.
 
@@ -70,22 +70,18 @@ test('exceptions become a human-readable failure', () async {
 - Call `init()` exactly like DI does, and `dispose()` at the end.
 - After a write, `await Future<void>.delayed(Duration.zero)` lets the stream deliver the change before reading `watch<Name>().value`.
 
-## Presentation: controller with plain functions
+## Presentation: controller
 
-A controller gets its use cases through the constructor as functions, so its test passes plain functions — no DI, no fakes:
+A controller holds UI state only and has no dependencies, so its test just creates it — no DI, no fakes. The use case
+calls (progress, errors, a failed add keeping its text) are tested through the page with a test DI (below):
 
 ```dart
-test('a failure becomes FailureResultState<void> with the message', () async {
-  final NotesController controller = NotesController(
-    add: (String text) async => const Result.failure('Could not add'),
-    delete: (String id) async => Result.ok,
-  );
+test('starts with an empty note and idle actions', () {
+  final NotesController notesController = NotesController();
 
-  await controller.addNote('x');
-
-  expect(controller.value, isA<FailureResultState<void>>());
-  expect((controller.value as FailureResultState<void>).message, 'Could not add');
-  controller.dispose();
+  expect(notesController.noteTextController.text, isEmpty);
+  expect(notesController.addingStateController.value.isIdle, isTrue);
+  notesController.dispose();
 });
 ```
 

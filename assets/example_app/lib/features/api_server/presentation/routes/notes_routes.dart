@@ -24,7 +24,7 @@ final class NotesRoutes implements RouterInjectable {
 
   final Future<Result<void>> Function(String text) _addNote;
 
-  /// Creates the routes with the use cases they call: `watchNotesUseCase.call`, `addNoteUseCase.call`.
+  /// Creates the routes with the use cases they call: `() => watchNotesUseCase()`, `(text) => addNoteUseCase(text)`.
   const NotesRoutes({required this._watchNotes, required this._addNote});
 
   @override

@@ -34,9 +34,13 @@ Rules (all enabled by default):
     stateless_with_controllers — StatelessWidget calling controller.init()/dispose() must be StatefulWidget
     value_listenable_exposure — domain, repository public API and getters expose ValueListenable, never ValueNotifier
     watch_order        — watch()/registerHandler() only at the top level of build(), never inside if/for/switch/callbacks
+    controller_naming  — every controller (ValueNotifier, *Controller) is named '<noun>Controller', a FocusNode '<noun>FocusNode'
+    controller_no_actions — controllers hold UI state only: no functions returning Future<Result> (the owner widget calls use cases)
     static_const_in_state_class — static const of a stateful widget live in its State class
     magic_numbers_in_layout — numbers in EdgeInsets/Size/Offset/Color must be static const
     theme_import       — values shared by features live in lib/core/presentation/theme.dart (AppTheme)
+    controller_naming  — every controller (ValueNotifier, *Controller) is named '<noun>Controller', a FocusNode '<noun>FocusNode'
+    controller_no_actions — controllers hold UI state only: no functions returning Future<Result> (the owner widget calls use cases)
 Default ignored files (cannot be disabled): firebase_options.dart
 
 Ignored paths (folders or files the linter does not see at all — not linted, not counted by folder_naming):
@@ -60,7 +64,7 @@ from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from typing import Sequence
 
-__version__ = "0.7.1"
+__version__ = "0.8.0"
 # ── Rule definitions ────────────────────────────────────────────────
 
 ALL_RULES = {
@@ -92,6 +96,8 @@ ALL_RULES = {
     "theme_import",
     "value_listenable_exposure",
     "watch_order",
+    "controller_naming",
+    "controller_no_actions",
 }
 
 # Files ignored by default (generated/config files that should not be linted)
@@ -876,7 +882,7 @@ def check_inline_callbacks(result: AnalysisResult) -> None:
                     # If the body is a single method call that forwards
                     # constructor parameters (this.xxx or parameter names), allow it.
                     if re.match(r'_\w+\s*\(\s*this\.\w+', closure_body) or \
-                       re.match(r'_\w+\s*\(\s*\w+\s*\)', closure_body) and \
+                       re.match(r'_\w+\s*\(\s*\w+(?:\s*,\s*\w+)*\s*\)', closure_body) and \
                        not re.search(r'\bif\b|\belse\b|\bfor\b|\bwhile\b|\btry\b|\bcatch\b|\breturn\b', closure_body):
                         continue
 
@@ -2358,6 +2364,66 @@ def check_theme_import(result: AnalysisResult) -> None:
                 message=f"'{name}' duplicates {shared} from lib/{CORE_THEME_FILE} — use the shared constant",
                 snippet=_line_at(content, i),
             ))
+
+# Declarations of controllers: `Type name` followed by `;`, `=`, `,`, `)` or `}` — fields, locals, parameters.
+_CONTROLLER_DECL = re.compile(
+    r'(?<![\w<.])(?P<type>ValueNotifier<.*?>+|[A-Z]\w*Controller(?:<.*?>+)?|FocusNode)\??\s+(?P<name>[A-Za-z_]\w*)\s*(?=[;=,)}])'
+)
+
+# Controller names are nouns: `scrollingController`, not `isScrollingController`.
+_PREDICATE_PREFIX = re.compile(r'^_?(?:is|has|can|should)[A-Z]')
+
+
+def check_controller_naming(result: AnalysisResult) -> None:
+    """Every controller in presentation is named `<noun>Controller` (`savingStateController`); a FocusNode `<noun>FocusNode`."""
+    if not _is_presentation_file(result.file):
+        return
+    content = _read_file(Path(result.file))
+    code, _ = _scan_dart(content)
+
+    for i, line in enumerate(code.splitlines(), 1):
+        if line.strip().startswith("//"):
+            continue
+        for m in _CONTROLLER_DECL.finditer(line):
+            dart_type, name = m.group("type"), m.group("name")
+            if name in {"get", "set", "operator"}:
+                continue
+            suffix = "FocusNode" if dart_type == "FocusNode" else "Controller"
+            if not name.endswith(suffix):
+                if name.lower() == suffix.lower() and dart_type.endswith(suffix):
+                    hint = dart_type[0].lower() + dart_type[1:]
+                else:
+                    hint = re.sub(r"^(_?)(?:is|has|can|should)([A-Z])", lambda m: m.group(1) + m.group(2).lower(), name)
+                    hint = re.sub(r"(?:Focus|Node|State|Notifier)$", "", hint) + ("State" if dart_type.startswith("ValueNotifier<ResultState") else "") + suffix
+                result.violations.append(Violation(
+                    file=result.file, line=i, rule="controller_naming",
+                    message=f"'{name}' is a {dart_type} — controllers are named '<noun>{suffix}', e.g. '{hint}'",
+                    snippet=_line_at(content, i),
+                ))
+            elif _PREDICATE_PREFIX.match(name):
+                result.violations.append(Violation(
+                    file=result.file, line=i, rule="controller_naming",
+                    message=f"'{name}' — a controller name is a noun of what it holds, without is/has/can/should",
+                    snippet=_line_at(content, i),
+                ))
+
+
+def check_controller_no_actions(result: AnalysisResult) -> None:
+    """A controller holds UI state only: it never takes or runs actions (functions returning `Future<Result>`)."""
+    if not _is_in_controllers_folder(result.file):
+        return
+    content = _read_file(Path(result.file))
+    code, _ = _scan_dart(content)
+
+    for i, line in enumerate(code.splitlines(), 1):
+        if re.search(r'Future<Result\b[^;{]*>\s*Function\b', line) or re.search(r'^\s*typedef\b.*Future<Result\b', line):
+            result.violations.append(Violation(
+                file=result.file, line=i, rule="controller_no_actions",
+                message="Controller takes an action (a function returning Future<Result>) — the owner widget calls the use case and records the result in the controller",
+                snippet=_line_at(content, i),
+            ))
+
+
 # ── Main ────────────────────────────────────────────────────────────
 
 CHECKERS = {
@@ -2389,6 +2455,8 @@ CHECKERS = {
     "theme_import": check_theme_import,
     "value_listenable_exposure": check_value_listenable_exposure,
     "watch_order": check_watch_order,
+    "controller_naming": check_controller_naming,
+    "controller_no_actions": check_controller_no_actions,
 }
 def _collect_dart_files(path: str) -> list[Path]:
     """Collect all .dart files under the given path."""
@@ -2514,6 +2582,8 @@ Rules (comma-separated, or 'all' for all):
     static_const_in_state_class — static const of a stateful widget in its State class
     magic_numbers_in_layout — numbers in EdgeInsets/Size/Offset/Color must be static const
     theme_import       — shared values in lib/core/presentation/theme.dart
+    controller_naming  — controllers named '<noun>Controller', FocusNodes '<noun>FocusNode'
+    controller_no_actions — controllers take no functions returning Future<Result>
 
 Default ignored files: firebase_options.dart (cannot be disabled)
 

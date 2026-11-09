@@ -6,6 +6,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased]
+
+### Changed (breaking) — Controllers are Flutter-style UI state
+- A controller now means what it means in Flutter (`TextEditingController`): it holds UI state only — fields, focus,
+  scroll, mode, validation and the progress of an action (`<action>StateController`, a
+  `ValueNotifier<ResultState<void>>`). It never takes or calls use cases: no `typedef`s or constructor functions
+  returning `Future<Result>`.
+- The owner widget (`WatchingWidget` + `createOnce`) calls the use case itself in a private method —
+  `addNoteUseCase(text)`, never `addNoteUseCase.call` — skips while loading, checks `controller.isDisposed` after the
+  `await` and writes `ResultState.of(result)` into the controller. Leaf widgets get only data, `ValueListenable`s and
+  callbacks.
+- Naming: every controller (class, field, local, parameter) ends with `Controller` and is a noun of what it holds
+  (`savingStateController`, `songFormController`, `signUpModeController` — not `saveState`, `isSignUp`); a
+  `FocusNode` ends with `FocusNode`.
+- Example app: `NotesController` is a plain class (`noteTextController`, `addingStateController`,
+  `deletingStateController`, `isDisposed`); `NotesPage` calls `addNoteUseCase` / `deleteNoteUseCase`; the API server
+  routes get closures (`() => watchNotesUseCase()`) instead of `.call` tear-offs.
+- Docs: `controllers.md` rewritten; `SKILL.md`, `DECISIONS.md`, `README.md`, `result_state.md`, `result.md`,
+  `testing.md`, `widget_rules.md`, `feature_template_auth.md`, `reactive_state_*.md`, `imports.md`,
+  `folder_structure.md`, `serving_http.md` follow.
+
+### Added
+- Linter 0.8.0 (30 rules): `controller_naming` — controllers named `<noun>Controller` (no `is`/`has`/`can`/`should`
+  prefix), FocusNodes `<noun>FocusNode`, in every presentation file; `controller_no_actions` — no functions returning
+  `Future<Result>` in `presentation/controllers/`.
+- `inline_callbacks` allows a closure that only forwards several plain values to one private method
+  (`(String id) => _onDeletePressed(notesController, id)`).
+
 ## [0.8.0] - 2026-10-31
 
 ### Added — Serving use cases over HTTP

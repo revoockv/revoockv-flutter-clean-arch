@@ -26,13 +26,15 @@ without reading all references in full.
 | Understand ValueNotifier inside / ValueListenable outside | `references/reactive_state_syntax.md` |
 | Read state in a widget | `watch(watch<Name>UseCase()).value` — `references/reactive_state_syntax.md` |
 | Navigate / show a snackbar when state changes | `registerHandler(target: watch<Name>UseCase(), handler: _onX)` — `references/reactive_state_syntax.md` |
-| Show the progress / error of a user action | `ValueNotifier<ResultState<void>>` controller + `createOnce` + `registerHandler` — `references/controllers.md` |
+| Show the progress / error of a user action | `<action>StateController` (`ValueNotifier<ResultState<void>>`) in a UI controller; the owner widget calls the use case and reacts with `registerHandler` — `references/controllers.md` |
+| Name a controller | `<noun>Controller` for the class, fields, locals and parameters (`savingStateController`); `<noun>FocusNode` — `references/controllers.md` → "Naming" |
+| Call a use case | `addSongUseCase(author: …)` in the owner widget's private method — never `.call`, never inside a controller — `references/controllers.md` |
 | Keep rebuilds few and low | `references/controllers.md` → "Owner and rebuilds", `references/reactive_state_patterns.md` |
 | Fix "watch order" errors / conditional watch | The order rule — `references/reactive_state_syntax.md` |
 | Minimize rebuilds in a widget tree | `references/reactive_state_patterns.md` |
 | Decide when to use `WatchingWidget` vs `StatelessWidget` | `references/widget_rules.md` |
 | Know that `setState` is banned | `references/controllers.md` |
-| Decide whether a widget needs a controller (UI logic only) | `references/controllers.md` → "When a controller is needed" |
+| Decide whether a widget needs a controller (UI state only) | `references/controllers.md` → "When a controller is needed" |
 
 ---
 

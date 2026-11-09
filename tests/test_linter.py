@@ -747,6 +747,94 @@ class IgnorePathsTest(unittest.TestCase):
         self.assertIn(("notes.dart", "dartdoc_public"), self.lint(ignore_paths=["lib/features/a/presentation/rout"]))
 
 
+CONTROLLERS = "features/notes/presentation/controllers/"
+
+
+class ControllerNamingTest(unittest.TestCase):
+    RULES = {"controller_naming"}
+
+    def test_noun_controller_names_are_valid(self):
+        code = """
+            final class SongFormController {
+              final TextEditingController authorController = TextEditingController();
+              final ValueNotifier<ResultState<void>> savingStateController = ValueNotifier<ResultState<void>>(ResultState.idle);
+              final ValueNotifier<bool> signUpModeController = ValueNotifier<bool>(false);
+              final FocusNode passwordFocusNode = FocusNode();
+              ScrollController get scrollController => _scrollController;
+            }
+        """
+        self.assertEqual(run({CONTROLLERS + "song_form_controller.dart": code}, self.RULES), [])
+
+    def test_names_without_the_suffix_are_reported(self):
+        code = """
+            final class SongFormController {
+              final TextEditingController author = TextEditingController();
+              final ValueNotifier<ResultState<void>> saveState = ValueNotifier<ResultState<void>>(ResultState.idle);
+              final FocusNode passwordFocus = FocusNode();
+            }
+        """
+        found = run({CONTROLLERS + "song_form_controller.dart": code}, self.RULES)
+        self.assertEqual([line for _, _, line in found], [3, 4, 5])
+
+    def test_locals_and_parameters_are_checked(self):
+        code = """
+            final class AddSongPage extends WatchingWidget {
+              @override
+              Widget build(BuildContext context) {
+                final SongFormController form = createOnce(_createSongFormController);
+                return const SizedBox();
+              }
+
+              static SongFormController _createSongFormController() => SongFormController();
+
+              void _onSavePressed(SongFormController songFormController) {}
+            }
+        """
+        found = run({"features/notes/presentation/pages/add_song_page.dart": code}, self.RULES)
+        self.assertEqual([line for _, _, line in found], [5])
+
+    def test_predicate_names_are_reported(self):
+        code = """
+            final class LyricsController {
+              final ValueNotifier<bool> isScrollingController = ValueNotifier<bool>(false);
+            }
+        """
+        found = run({CONTROLLERS + "lyrics_controller.dart": code}, self.RULES)
+        self.assertEqual([line for _, _, line in found], [3])
+
+    def test_data_layer_is_not_checked(self):
+        code = """
+            final class NotesDataSource {
+              final StreamController<int> _changes = StreamController<int>();
+            }
+        """
+        self.assertEqual(run({"features/notes/data/data_sources/notes_data_source.dart": code}, self.RULES), [])
+
+
+class ControllerNoActionsTest(unittest.TestCase):
+    RULES = {"controller_no_actions"}
+
+    def test_action_fields_and_typedefs_are_reported(self):
+        code = """
+            typedef SaveSong = Future<Result<void>> Function({required String name});
+
+            final class SongFormController {
+              final Future<Result<void>> Function(String text) _add;
+            }
+        """
+        found = run({CONTROLLERS + "song_form_controller.dart": code}, self.RULES)
+        self.assertEqual([line for _, _, line in found], [2, 5])
+
+    def test_plain_ui_controller_is_valid(self):
+        code = """
+            final class TabController {
+              final ValueNotifier<int> selectedTabController = ValueNotifier<int>(0);
+              final void Function() _onReset;
+            }
+        """
+        self.assertEqual(run({CONTROLLERS + "tab_controller.dart": code}, self.RULES), [])
+
+
 class ExampleAppTest(unittest.TestCase):
     def test_example_app_has_no_violations(self):
         with contextlib.redirect_stdout(io.StringIO()):

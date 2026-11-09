@@ -104,7 +104,7 @@ final class FailureResultState<T> extends ResultState<T> {
 }
 ```
 
-It lives in `core/domain/entities/` next to `Result`: repositories expose it through domain interfaces, controllers use it in presentation.
+It lives in `core/domain/entities/` next to `Result`: repositories expose it through domain interfaces, UI controllers hold it in presentation.
 
 ## Read it like `Result`
 
@@ -112,24 +112,23 @@ It lives in `core/domain/entities/` next to `Result`: repositories expose it thr
 - the value or the message — a `switch` over the subclasses, or `state.when(idle: …, loading: …, success: …, failure: …)` with private methods.
 - `ResultState.of(result)` turns a finished `Result<T>` into `success` / `failure`.
 
-## Action — in a controller
+## Action — the owner widget calls, the controller holds
 
 ```dart
-final class NotesController extends ValueNotifier<ResultState<void>> {
-  NotesController({required this._add, …}) : super(ResultState.idle);
+// NotesController holds: final ValueNotifier<ResultState<void>> addingStateController = …;
+Future<void> _onAddPressed(NotesController notesController) async {
+  final ValueNotifier<ResultState<void>> addingStateController = notesController.addingStateController;
+  if (addingStateController.value.isLoading) return;   // a double tap does not run it twice
+  addingStateController.value = ResultState.loading;
 
-  Future<bool> _run(Future<Result<void>> Function() action) async {
-    if (value.isLoading) return false;          // a double tap does not run it twice
-    value = ResultState.loading;
-    final Result<void> result = await action();
-    if (_isDisposed) return false;
-    value = ResultState.of(result);              // success / a new failure instance
-    return result.isSuccess;
-  }
+  final Result<void> result = await addNoteUseCase(notesController.noteTextController.text);
+  if (notesController.isDisposed) return;
+
+  addingStateController.value = ResultState.of(result); // success / a new failure instance
 }
 ```
 
-Full code: `references/controllers.md`, `assets/example_app/lib/features/notes/presentation/controllers/notes_controller.dart`.
+Full code: `references/controllers.md`, `assets/example_app/lib/features/notes/presentation/pages/notes_page.dart`.
 
 ## Live data — in a repository
 
@@ -172,5 +171,5 @@ The `switch` is exhaustive: every state is handled.
 ## Rules
 
 - **One type for every such state.** A domain state with its own meaning (`AuthState`: signed in / signed out) stays its own sealed class; "loading / data / error" is always `ResultState<T>`.
-- **A failure from a controller is a new instance** (`ResultState.of(result)`, `ResultState.failure(message)` with a runtime message): a `ValueNotifier` notifies only when the value changes, so the same error twice shows twice. A `const` failure (`const ResultState.failure(_loadFailedMessage)` in a repository) is one shared instance — fine for a state, not for a repeated event.
+- **A failure of an action is a new instance** (`ResultState.of(result)`, `ResultState.failure(message)` with a runtime message): a `ValueNotifier` notifies only when the value changes, so the same error twice shows twice. A `const` failure (`const ResultState.failure(_loadFailedMessage)` in a repository) is one shared instance — fine for a state, not for a repeated event.
 - `idle` / `loading` are typed `ResultState<Never>`, so they fit any `ResultState<T>`.
