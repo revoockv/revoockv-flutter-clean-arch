@@ -663,6 +663,178 @@ class FolderNamingTest(unittest.TestCase):
         self.assertIn(("result.dart", "folder_naming", 0), found)
 
 
+class FunctionTypeFieldTest(unittest.TestCase):
+    def test_multiline_function_type_field_is_not_a_method(self):
+        code = """
+            /// Routes.
+            final class LoreRoutes {
+              final Future<Result<List<Passage>>> Function({
+                required String query,
+                int limit,
+              })
+              _findPassages;
+
+              /// Creates the routes.
+              const LoreRoutes({required this._findPassages});
+            }
+        """
+        self.assertEqual(run({"features/a/presentation/routes/lore_routes.dart": code}, {"dartdoc_public"}), [])
+
+
+class IgnorePathsTest(unittest.TestCase):
+    """Folders listed in .clean_arch_ignore (global, local) or --ignore-paths are not seen by the linter."""
+
+    FILES = {
+        "pubspec.yaml": "name: app\n",
+        "lib/features/a/data/data_sources/.gitkeep": "",
+        "lib/features/a/data/models/.gitkeep": "",
+        "lib/features/a/data/repositories/.gitkeep": "",
+        "lib/features/a/domain/entities/.gitkeep": "",
+        "lib/features/a/domain/repositories/.gitkeep": "",
+        "lib/features/a/domain/use_cases/.gitkeep": "",
+        "lib/features/a/presentation/pages/a_page.dart": "/// A.\nfinal class APage {}\n",
+        "lib/features/a/presentation/widgets/.gitkeep": "",
+        "lib/features/a/presentation/di/.gitkeep": "",
+        "lib/features/a/presentation/controllers/.gitkeep": "",
+        "lib/features/a/presentation/routes/notes.dart": "final class Notes {}\n",
+    }
+
+    def setUp(self):
+        self._global = linter.GLOBAL_IGNORE_FILE
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        linter.GLOBAL_IGNORE_FILE = self.root / "skill" / ".clean_arch_ignore"
+        for rel, code in self.FILES.items():
+            path = self.root / "app" / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(code, encoding="utf-8")
+
+    def tearDown(self):
+        linter.GLOBAL_IGNORE_FILE = self._global
+        self.tmp.cleanup()
+
+    def lint(self, target: str = "lib", **kwargs) -> list[tuple[str, str]]:
+        with contextlib.redirect_stdout(io.StringIO()):
+            report = linter.analyze(str(self.root / "app" / target), {"folder_naming", "naming_file", "dartdoc_public"},
+                                    json_output=True, **kwargs)
+        return sorted({(Path(r.file).name, v.rule) for r in report.results for v in r.violations})
+
+    def test_not_ignored_folder_is_reported(self):
+        found = self.lint()
+        self.assertIn(("notes.dart", "dartdoc_public"), found)
+        self.assertTrue(any(rule == "folder_naming" for _, rule in found))
+
+    def test_local_ignore_file_with_glob_and_comment(self):
+        (self.root / "app" / ".clean_arch_ignore").write_text(
+            "# server folders\n\nlib/features/*/presentation/routes/  # trailing slash and comment\n", encoding="utf-8")
+        self.assertEqual(self.lint(), [])
+
+    def test_global_ignore_file(self):
+        linter.GLOBAL_IGNORE_FILE.parent.mkdir(parents=True)
+        linter.GLOBAL_IGNORE_FILE.write_text("lib/features/a/presentation/routes\n", encoding="utf-8")
+        self.assertEqual(self.lint(), [])
+
+    def test_cli_paths_and_feature_target(self):
+        self.assertEqual(self.lint("lib/features/a", ignore_paths=["./lib/features/a/presentation/routes"]), [])
+
+    def test_ignored_file_is_not_counted(self):
+        with contextlib.redirect_stdout(io.StringIO()):
+            report = linter.analyze(str(self.root / "app" / "lib"), {"dartdoc_public"}, json_output=True,
+                                    ignore_paths=["lib/features/a/presentation/routes/notes.dart"])
+        self.assertEqual(report.total_files, 1)
+
+    def test_prefix_of_a_name_is_not_a_match(self):
+        self.assertIn(("notes.dart", "dartdoc_public"), self.lint(ignore_paths=["lib/features/a/presentation/rout"]))
+
+
+CONTROLLERS = "features/notes/presentation/controllers/"
+
+
+class ControllerNamingTest(unittest.TestCase):
+    RULES = {"controller_naming"}
+
+    def test_noun_controller_names_are_valid(self):
+        code = """
+            final class SongFormController {
+              final TextEditingController authorController = TextEditingController();
+              final ValueNotifier<ResultState<void>> savingStateController = ValueNotifier<ResultState<void>>(ResultState.idle);
+              final ValueNotifier<bool> signUpModeController = ValueNotifier<bool>(false);
+              final FocusNode passwordFocusNode = FocusNode();
+              ScrollController get scrollController => _scrollController;
+            }
+        """
+        self.assertEqual(run({CONTROLLERS + "song_form_controller.dart": code}, self.RULES), [])
+
+    def test_names_without_the_suffix_are_reported(self):
+        code = """
+            final class SongFormController {
+              final TextEditingController author = TextEditingController();
+              final ValueNotifier<ResultState<void>> saveState = ValueNotifier<ResultState<void>>(ResultState.idle);
+              final FocusNode passwordFocus = FocusNode();
+            }
+        """
+        found = run({CONTROLLERS + "song_form_controller.dart": code}, self.RULES)
+        self.assertEqual([line for _, _, line in found], [3, 4, 5])
+
+    def test_locals_and_parameters_are_checked(self):
+        code = """
+            final class AddSongPage extends WatchingWidget {
+              @override
+              Widget build(BuildContext context) {
+                final SongFormController form = createOnce(_createSongFormController);
+                return const SizedBox();
+              }
+
+              static SongFormController _createSongFormController() => SongFormController();
+
+              void _onSavePressed(SongFormController songFormController) {}
+            }
+        """
+        found = run({"features/notes/presentation/pages/add_song_page.dart": code}, self.RULES)
+        self.assertEqual([line for _, _, line in found], [5])
+
+    def test_predicate_names_are_reported(self):
+        code = """
+            final class LyricsController {
+              final ValueNotifier<bool> isScrollingController = ValueNotifier<bool>(false);
+            }
+        """
+        found = run({CONTROLLERS + "lyrics_controller.dart": code}, self.RULES)
+        self.assertEqual([line for _, _, line in found], [3])
+
+    def test_data_layer_is_not_checked(self):
+        code = """
+            final class NotesDataSource {
+              final StreamController<int> _changes = StreamController<int>();
+            }
+        """
+        self.assertEqual(run({"features/notes/data/data_sources/notes_data_source.dart": code}, self.RULES), [])
+
+
+class ControllerNoActionsTest(unittest.TestCase):
+    RULES = {"controller_no_actions"}
+
+    def test_action_fields_and_typedefs_are_reported(self):
+        code = """
+            typedef SaveSong = Future<Result<void>> Function({required String name});
+
+            final class SongFormController {
+              final Future<Result<void>> Function(String text) _add;
+            }
+        """
+        found = run({CONTROLLERS + "song_form_controller.dart": code}, self.RULES)
+        self.assertEqual([line for _, _, line in found], [2, 5])
+
+    def test_plain_ui_controller_is_valid(self):
+        code = """
+            final class TabController {
+              final ValueNotifier<int> selectedTabController = ValueNotifier<int>(0);
+              final void Function() _onReset;
+            }
+        """
+        self.assertEqual(run({CONTROLLERS + "tab_controller.dart": code}, self.RULES), [])
+
+
 class ExampleAppTest(unittest.TestCase):
     def test_example_app_has_no_violations(self):
         with contextlib.redirect_stdout(io.StringIO()):

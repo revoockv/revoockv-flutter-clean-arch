@@ -5,8 +5,8 @@ Self-check of the skill: the docs, the linter and the example app must agree.
 Steps:
   1. linter unit tests            python3 -m unittest discover -s tests
   2. package versions             scripts/check_versions.py (report; --strict-versions fails on outdated)
-  3. code in the docs vs example  every ```dart block whose line above is a `lib/core/...dart` path must
-                                  equal the example's core file
+  3. code in the docs vs example  every ```dart block whose line above is a `lib/core/...dart` or
+                                  `lib/features/api_server/...dart` path must equal the example's file
   4. example app                  copy of assets/example_app → flutter pub get, analyze, test, linter --strict
   5. auth template from the docs  every ```dart block under a `lib/features/auth/...dart` path is written
                                   into the copy of the example app and must pass flutter analyze and the linter
@@ -37,7 +37,10 @@ DOCS_PACKAGE = "your_app"
 EXAMPLE_PACKAGE = "example_app"
 
 # Doc code blocks checked by compiling: core files and the auth template
-DOC_PATH_PREFIXES = ("lib/core/", "lib/features/auth/")
+DOC_PATH_PREFIXES = ("lib/core/", "lib/features/auth/", "lib/features/api_server/")
+
+# Doc blocks that must equal the example app file by file
+EXAMPLE_PATH_PREFIXES = ("lib/core/", "lib/features/api_server/")
 
 # A file block: a line that starts with `lib/....dart`, a blank line, then ```dart
 DOC_FILE_BLOCK = re.compile(r"^`(lib/[^`]+\.dart)`[^\n]*\n\n```dart\n(.*?)```", re.M | re.S)
@@ -79,7 +82,7 @@ def doc_blocks() -> dict[str, str]:
 
 def compare_core(blocks: dict[str, str]) -> None:
     for path, code in sorted(blocks.items()):
-        if not path.startswith("lib/core/"):
+        if not path.startswith(EXAMPLE_PATH_PREFIXES):
             continue
         example_file = EXAMPLE / path
         same = example_file.is_file() and example_file.read_text(encoding="utf-8") == code

@@ -22,12 +22,12 @@ This template is the golden path. When uncertain, copy it and rename only.
 
 It enforces:
 
-- Controllers only when there is UI logic (a plain class with notifiers, or a `ValueNotifier` itself); they never touch the data layer.
+- Controllers only when there is UI state (a plain class with notifiers, or a `ValueNotifier` itself), like Flutter's controllers; they never call use cases and never touch the data layer.
 - DataSource may use Streams; repository owns a private ValueNotifier and exposes ValueListenable.
 - Models (DTO) convert to/from Domain entities in the model class.
 - UI reads state only as `watch(watch<Name>UseCase()).value` via top-level getters.
 - Which screen to show is a `watch` + `switch` over the state (`AuthGateWidget`); one-off reactions (snackbars) go through `registerHandler(target: …, handler: _onX)`.
-- An action whose progress or error the UI shows goes through a UI controller (one `ResultState`; the widget shows a failure with `registerHandler`); an action with nothing to show is called by the widget directly.
+- Use cases are always called by a widget (`signInUseCase()`). When the UI shows the progress or error of the action, the widget records it in a `<action>StateController` of its UI controller and shows a failure with `registerHandler`; an action with nothing to show needs no controller.
 - Result is used for success/failure.
 - Use cases pass through repository Result — no try/catch in use cases.
 
@@ -497,9 +497,9 @@ final class AuthStatusWidget extends WatchingWidget {
 
 ---
 
-## Presentation UI: action result (`ResultState` controller + `registerHandler`)
+## Presentation UI: action result (UI controller + `registerHandler`)
 
-`SignInButtonWidget` and its `SignInController` (`presentation/controllers/sign_in_controller.dart`) — full code in `references/controllers.md` → "With a controller". The controller is a `ValueNotifier<ResultState<void>>` that gets `signInUseCase.call` through its constructor; the button owns it with `createOnce`, watches `controller.value.isLoading` and shows a snackbar from `registerHandler(target: controller, handler: _onActionChanged)`.
+`SignInButtonWidget` and its `SignInController` (`presentation/controllers/sign_in_controller.dart`) — full code in `references/controllers.md` → "With a controller". The controller only holds `signingInStateController` (a `ValueNotifier<ResultState<void>>`); the button owns it with `createOnce`, calls `signInUseCase()` itself, watches `signingInStateController.value.isLoading` and shows a snackbar from `registerHandler(target: signInController.signingInStateController, handler: _onSigningInChanged)`.
 
 ---
 

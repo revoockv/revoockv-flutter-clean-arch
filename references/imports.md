@@ -14,6 +14,6 @@ ValueNotifier / ValueListenable:
 
 Use cases and repositories:
 - Only the DI files in `presentation/di/` import them, with relative paths: `import '../../domain/use_cases/add_note_use_case.dart';`.
-- Pages, widgets and controllers never import use cases, repositories or the data layer: pages and widgets import `../di/<feature>_getters.dart`, controllers get use cases as constructor functions (linter: `import_violation`).
+- Pages, widgets and controllers never import use cases, repositories or the data layer: pages and widgets import `../di/<feature>_getters.dart`, controllers never get use cases at all — the owner widget calls them (linters: `import_violation`, `controller_no_actions`).
 
 Inside a feature — relative imports; core — `package:<your_app>/core/...`.

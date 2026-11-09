@@ -127,6 +127,6 @@ void _showUser(User user) { /* user is non-nullable */ }
 void _showError(String error) { /* human-readable text */ }
 ```
 
-In widgets, when the UI shows the progress or the error of an action, the `Result` goes through a UI controller: the controller (a `ValueNotifier<ResultState<void>>`) calls the use case and sets `ResultState.failure(message)`, the owner shows it with `registerHandler` — see `references/controllers.md` → "With a controller". When nothing is shown, the widget calls the use case directly ("Without a controller").
+In widgets, the owner widget calls the use case. When the UI shows the progress or the error of the action, the widget writes `ResultState.of(result)` into a `<action>StateController` of its UI controller and shows a failure with `registerHandler` — see `references/controllers.md` → "With a controller". When nothing is shown, the widget just calls the use case ("Without a controller").
 
 `isSuccess` / `isFailure` are plain `bool` getters: Dart does not narrow the type after them, so use `when` (or a `switch`) whenever the value or the error is read. There are no nullable `value` / `errorMessage` getters on `Result`.
