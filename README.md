@@ -66,7 +66,7 @@ tests/              linter unit tests
 Run them from the skill folder with Python 3.
 
 ```bash
-# architecture linter (28 rules) on a Flutter project
+# architecture linter (30 rules) on a Flutter project
 python3 scripts/dart_clean_arch_linter.py path/to/app/lib --strict
 
 # folder skeleton and DI stubs for a new project or feature

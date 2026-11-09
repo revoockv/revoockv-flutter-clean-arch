@@ -2,7 +2,7 @@
 name: revoockv-flutter-clean-arch
 description: Enforce and implement revoockv's Flutter clean architecture using GetIt + watch_it (ValueNotifier-based reactive state). Use when the user asks to create a new feature, refactor an existing project/feature, migrate from Riverpod/Bloc/streams to watch_it + ValueNotifier, add DI modules per feature/subfeature (register by type + use case getters), create data models (DTO) with mapping to domain entities, or build minimal-rebuild UI with watch(watch<Name>UseCase()).value.
 metadata:
-  version: 0.8.0
+  version: 0.9.0
   author: revoockv
 ---
 
