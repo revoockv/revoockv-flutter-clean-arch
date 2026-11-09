@@ -64,7 +64,7 @@ from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from typing import Sequence
 
-__version__ = "0.8.0"
+__version__ = "0.9.0"
 # ── Rule definitions ────────────────────────────────────────────────
 
 ALL_RULES = {

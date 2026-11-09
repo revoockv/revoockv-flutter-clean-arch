@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [Unreleased]
+## [0.9.0] - 2026-11-09
 
 ### Changed (breaking) — Controllers are Flutter-style UI state
 - A controller now means what it means in Flutter (`TextEditingController`): it holds UI state only — fields, focus,
@@ -28,7 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `folder_structure.md`, `serving_http.md` follow.
 
 ### Added
-- Linter 0.8.0 (30 rules): `controller_naming` — controllers named `<noun>Controller` (no `is`/`has`/`can`/`should`
+- Linter 0.9.0 (30 rules): `controller_naming` — controllers named `<noun>Controller` (no `is`/`has`/`can`/`should`
   prefix), FocusNodes `<noun>FocusNode`, in every presentation file; `controller_no_actions` — no functions returning
   `Future<Result>` in `presentation/controllers/`.
 - `inline_callbacks` allows a closure that only forwards several plain values to one private method
