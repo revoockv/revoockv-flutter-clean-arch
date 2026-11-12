@@ -1,6 +1,6 @@
 # revoockv-flutter-clean-arch
 
-An agent skill (Claude Code, Cursor, Codex and other agents that read `SKILL.md`) for building Flutter apps with clean architecture by **templates**. A template holds every choice of the architecture and code style — folders, state manager, DI, use cases, errors, models, style, tests, git — split into small rule files, plus an example project built with all of it. The default template, `revoockv-original`, is clean architecture on **GetIt + watch_it** and `ValueNotifier`-based reactive state. Make your own template from it (`templates/README.md`); templates have their own versions, the skill has its own.
+An agent skill (Claude Code, Cursor, Codex and other agents that read `SKILL.md`) for building Flutter apps with clean architecture by **templates**. A template holds every choice of the architecture and code style — folders, state manager, DI, use cases, errors, models, style, tests, git — split into small rule files, plus an example project built with all of it. The default template, `revoockv-original`, is clean architecture on **GetIt + watch_it** and `ValueNotifier`-based reactive state. Make your own template from it (`docs/constructor.md`); templates have their own versions, the skill has its own.
 
 The agent uses it to create features, refactor or migrate existing ones (from Riverpod, Bloc or streams), wire DI per feature, map data models to domain entities and build UI with as few and as low rebuilds as possible. A linter checks the result.
 
@@ -56,7 +56,7 @@ The agent follows `SKILL.md` and the references, then runs the linter.
 SKILL.md                         how the agent finds the template and reads only what the task needs
 templates/index.toml             the default template
 templates/<name>/<version>/      template.toml (choices, topics), rules/<topic>/*.md, example/ (runnable app)
-templates/README.md              how templates are built and how to make one
+docs/constructor.md              how templates are built, made, changed and versioned
 docs/linter.md                   the architecture linter
 scripts/                         templates, linter, feature generator, version check, self-check
 tests/                           linter unit tests

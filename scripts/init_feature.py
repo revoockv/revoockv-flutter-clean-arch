@@ -12,8 +12,9 @@ folders get a `.gitkeep` so git keeps them.
 
 The folders come from `[structure]` of the project's template (`.clean_arch.toml`, else
 the default template, or `--template`). `--core` also copies the template's
-`[scaffold] core_files` from its example (the verified reference) and creates
-lib/di.dart with registerAndInit() when it is missing.
+`[scaffold] core_files` from its example (the verified reference). Stub files come from
+the template's `scaffold/` folder: `app/` (with --core, under lib/), `feature/` and
+`subfeature/` (under the feature); existing files are kept.
 
 Usage:
   python3 scripts/init_feature.py --core
@@ -39,21 +40,11 @@ EXAMPLE_PACKAGE = ""
 LAYOUT: dict[str, tuple[str, ...]] = {}
 CORE_FILES: tuple[str, ...] = ()
 
-APP_DI = """import 'package:watch_it/watch_it.dart';
-
-import 'core/presentation/di/core_di.dart';
-
-/// Registers every feature and waits until all async initializations finish.
-Future<void> registerAndInit() async {
-  await di.reset();
-
-  registerAndInitCore();
-
-  // registerAndInit<Feature>(); — one line per feature
-
-  await di.allReady();
-}
-"""
+# Stub files of the template: <template>/scaffold/{app,feature,subfeature}/**.tmpl.
+# `{{feature}}`, `{{Feature}}`, `{{subfeature}}`, `{{Subfeature}}`, `{{package}}` in names and text are filled in.
+SCAFFOLD = Path()
+TEMPLATE_SUFFIX = ".tmpl"
+NEXT_STEP = ""
 
 
 def _title(name: str) -> str:
@@ -89,6 +80,22 @@ def _keep_empty_folders(root: Path) -> None:
             (folder / ".gitkeep").touch()
 
 
+def _fill(text: str, values: dict[str, str]) -> str:
+    for key, value in values.items():
+        text = text.replace("{{" + key + "}}", value)
+    return text
+
+
+def _copy_stubs(kind: str, target: Path, values: dict[str, str]) -> None:
+    """Write the template's `scaffold/<kind>/` stubs under [target] (existing files are kept)."""
+    source = SCAFFOLD / kind
+    if not source.is_dir():
+        return
+    for stub in sorted(source.rglob("*" + TEMPLATE_SUFFIX)):
+        relative = _fill(str(stub.relative_to(source))[: -len(TEMPLATE_SUFFIX)], values)
+        _write_if_missing(target / relative, _fill(stub.read_text(encoding="utf-8"), values))
+
+
 def init_core(lib_dir: Path) -> None:
     root = lib_dir / "core"
     _make_layout(root)
@@ -98,7 +105,7 @@ def init_core(lib_dir: Path) -> None:
         if package:
             code = code.replace(f"package:{EXAMPLE_PACKAGE}/", f"package:{package}/")
         _write_if_missing(lib_dir / rel, code)
-    _write_if_missing(lib_dir / "di.dart", APP_DI)
+    _copy_stubs("app", lib_dir, {"package": package or EXAMPLE_PACKAGE})
     _keep_empty_folders(root)
     print(f"Initialized core at: {root}")
 
@@ -106,45 +113,18 @@ def init_core(lib_dir: Path) -> None:
 def init_feature(lib_dir: Path, feature: str, subfeature: str | None) -> None:
     root = lib_dir / "features" / feature
     _make_layout(root)
-    title = _title(feature)
-
-    _write_if_missing(
-        root / "presentation" / "di" / f"{feature}_di.dart",
-        f"""/// Registers the {feature} feature and starts its async initialization.
-///
-/// Called from `registerAndInit()` in `lib/di.dart`; `di.allReady()` waits for its `init()`s.
-void registerAndInit{title}() {{
-  // import 'package:watch_it/watch_it.dart'; and register bottom-up:
-  // 1. data sources — di.registerLazySingleton<...>(..., dispose: disposeResource)
-  // 2. repositories — di.registerSingletonAsync<...>(() => Impl(...).init(), dispose: disposeResource)
-  //    or di.registerLazySingleton<...>(...) when there is no startup work
-  // 3. use cases — di.registerLazySingleton<...>(() => UseCase(di<Repository>()))
-}}
-""",
-    )
-    _write_if_missing(
-        root / "presentation" / "di" / f"{feature}_getters.dart",
-        f"""// UI getters for the {feature} feature: one top-level getter per use case.
-// Widgets import only this file. Example:
-//
-// /// Watch use case for the live list of items.
-// Watch{title}UseCase get watch{title}UseCase => di<Watch{title}UseCase>();
-""",
-    )
+    values = {
+        "feature": feature,
+        "Feature": _title(feature),
+        "package": _package_name(lib_dir) or EXAMPLE_PACKAGE,
+    }
+    _copy_stubs("feature", root, values)
     if subfeature:
-        _write_if_missing(
-            root / "presentation" / "di" / f"{subfeature}_di.dart",
-            f"""/// Registers the {feature}.{subfeature} subfeature and starts its async initialization.
-///
-/// Prefer feature-only DI unless the user explicitly requests subfeature DI.
-void registerAndInit{title}{_title(subfeature)}() {{
-  // Register subfeature data sources, repositories, use cases (see {feature}_di.dart).
-}}
-""",
-        )
+        _copy_stubs("subfeature", root, {**values, "subfeature": subfeature, "Subfeature": _title(subfeature)})
     _keep_empty_folders(root)
     print(f"Initialized feature at: {root}")
-    print(f"Next: call registerAndInit{title}() from registerAndInit() in lib/di.dart")
+    if NEXT_STEP:
+        print(f"Next: {_fill(NEXT_STEP, values)}")
 
 
 def main() -> None:
@@ -156,13 +136,15 @@ def main() -> None:
     parser.add_argument("--template", help="template (name@version); default: the project's .clean_arch.toml, else the skill's default")
     args = parser.parse_args()
 
-    global EXAMPLE, EXAMPLE_PACKAGE, LAYOUT, CORE_FILES
+    global EXAMPLE, EXAMPLE_PACKAGE, LAYOUT, CORE_FILES, SCAFFOLD, NEXT_STEP
     try:
         template = templates.resolve(args.template, Path(args.lib_dir).resolve().parent)
     except templates.TemplateError as e:
         raise SystemExit(str(e)) from e
     EXAMPLE, EXAMPLE_PACKAGE = template.example_dir, template.example_package
     LAYOUT, CORE_FILES = template.layout, template.core_files
+    SCAFFOLD = template.folder / "scaffold"
+    NEXT_STEP = str(template.data.get("scaffold", {}).get("next_step", ""))
     print(f"Template {template.ref}")
 
     if not args.core and not args.feature:

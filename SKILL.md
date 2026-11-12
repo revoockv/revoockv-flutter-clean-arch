@@ -48,17 +48,6 @@ Do not read every topic up front: each costs context. A rule that names `example
 | `scripts/check_versions.py [--template REF]` | The template's pinned packages vs pub.dev (`--update` bumps them) |
 | `scripts/selfcheck.py [--template REF]` | Every template: rules vs example, example analyze/test/lint. Run it after changing the skill or a template |
 
-## 4. Managing templates
+## 4. Making or changing a template
 
-| Command | What it does |
-|---|---|
-| `templates.py list` | Every template version, the default marked |
-| `templates.py use REF --project P` | The project uses REF (writes `P/.clean_arch.toml`) |
-| `templates.py set-default REF` | The template of projects that choose none |
-| `templates.py new NAME --from REF` | A new template (version 1.0.0) copied from REF |
-| `templates.py bump NAME --to X.Y.Z` | A new version from the newest one; the old versions stay |
-| `templates.py validate [REF \| --all]` | Keys, files, sizes, lint rules |
-
-How a template is built and how to make one: `templates/README.md`. A template is ready only when `selfcheck.py --template REF` passes: build its `example/` by its rules first.
-
-Never change a released template version that projects use: `bump` it and change the copy.
+Only for tasks about templates themselves (create, change, version, choose, validate): read `docs/constructor.md`.
