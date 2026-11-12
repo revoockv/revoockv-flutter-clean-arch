@@ -6,11 +6,14 @@ import '../entities/note.dart';
 
 /// Source of truth for notes.
 abstract interface class NotesRepository {
-  /// Live list of notes — loading, the notes, or the load failure; always the same instance.
+  /// Live list of notes, newest first — loading, the notes, or the load failure; always the same instance.
   ValueListenable<ResultState<List<Note>>> watchNotes();
 
   /// Adds a note with [text].
   Future<Result<void>> addNote(String text);
+
+  /// Replaces the text of the note with [id].
+  Future<Result<void>> updateNote(String id, String text);
 
   /// Deletes the note with [id].
   Future<Result<void>> deleteNote(String id);

@@ -3,6 +3,9 @@ enum NoteAction {
   /// A note was added.
   added,
 
+  /// A note was changed.
+  updated,
+
   /// A note was deleted.
   deleted,
 }

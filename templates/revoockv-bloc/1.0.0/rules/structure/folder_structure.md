@@ -9,8 +9,11 @@ lib/
   main.dart                 runApp(ExampleAppWidget) → AppProvidersWidget → MaterialApp
   di.dart                   AppProvidersWidget: CoreProvidersWidget, then one <Feature>ProvidersWidget per feature
   core/                     the same layers as a feature
+    data/data_sources/      the app's storage, shared by features (the example: AppDatabase + InMemoryAppDatabase)
     domain/entities/        result.dart
-    presentation/di/        core_di.dart — CoreProvidersWidget (logger)
+    presentation/blocs/     state of the app shell (HomeTabCubit)
+    presentation/pages/     home_page.dart — the tabs
+    presentation/di/        core_di.dart — CoreProvidersWidget (logger, database)
     presentation/theme.dart AppTheme: values shared by features
   features/<feature>/
     data/
@@ -28,5 +31,6 @@ lib/
       di/                   <feature>_di.dart — <Feature>ProvidersWidget
 ```
 
-Where state lives: stored data in data sources (streamed out through the repository); what a screen shows in its
-Bloc/Cubit; text being typed in a `TextEditingController` of a `StatefulWidget`.
+Where state lives: stored data in the database behind the data sources (streamed out through the repositories);
+what a screen shows in its Bloc/Cubit; text being typed in a `TextEditingController` of a `StatefulWidget`. Features
+never import each other: two features over the same data each have their own data source and model.

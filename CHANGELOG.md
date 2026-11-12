@@ -33,6 +33,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Template `revoockv-bloc` 1.0.0: clean architecture on flutter_bloc with dependencies in the widget tree, made with the
   constructor; its notes example passes analyze, tests and the linter.
 - Linter: `[lint.params] use_case_imports_in`; `check_versions.py` checks the template's `[packages] tracked`.
+- `docs/example_app.md`: the one example app every template builds (notes + statistics over a placeholder database);
+  both templates' examples follow it. The `http` topic and the API server example are removed.
 
 ---
 

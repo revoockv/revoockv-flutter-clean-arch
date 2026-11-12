@@ -9,7 +9,7 @@ author = "revoockv"
 [choices]
 # Short answers to "how is it done here?"; the rule files say the details.
 layers = ["data", "domain", "presentation"]
-core = "lib/core mirrors the feature layers: shared Result, ResultState, DisposableResource, theme, core DI"
+core = "lib/core mirrors the feature layers: shared Result, ResultState, DisposableResource, the app database, theme, core DI, the home shell"
 app_state = "repositories: a private ValueNotifier, exposed only as ValueListenable"
 state_manager = "watch_it (watch, registerHandler, createOnce) over ValueNotifier"
 use_case_returns = ["Future<Result<T>> for actions", "ValueListenable<T> for live state (watch… use cases)"]
@@ -53,7 +53,6 @@ example_feature = [
   "rules/examples/auth_data.md",
   "rules/examples/auth_presentation.md",
 ]
-http = ["rules/http/serving_http.md"]
 
 [structure]
 # Folders of every feature (and of lib/core); init_feature creates them.
@@ -80,14 +79,14 @@ package = "example_app"
 # Docs import `package:<docs_package>/…`; selfcheck compiles their code inside the example.
 docs_package = "your_app"
 # Doc code blocks under these paths are compiled; those under `same_as_example` must equal the example's files.
-doc_paths = ["lib/core/", "lib/features/auth/", "lib/features/api_server/"]
-same_as_example = ["lib/core/", "lib/features/api_server/"]
+doc_paths = ["lib/core/", "lib/features/auth/"]
+same_as_example = ["lib/core/"]
 # The doc-only feature compiled in the example and linted on its own.
 doc_feature = "lib/features/auth"
 
 [packages]
 # Packages check_versions.py compares with pub.dev.
-tracked = ["get_it", "watch_it", "logger", "relic", "uuid", "flutter_lints"]
+tracked = ["get_it", "watch_it", "logger", "uuid", "flutter_lints"]
 
 [lint]
 # Rules this template turns off (none: all 30 apply).

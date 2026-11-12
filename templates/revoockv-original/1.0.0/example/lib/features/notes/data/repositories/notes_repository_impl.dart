@@ -11,13 +11,16 @@ import '../../domain/repositories/notes_repository.dart';
 import '../data_sources/notes_data_source.dart';
 import '../models/note_model.dart';
 
-/// Notes repository: mirrors the data source into a private [ValueNotifier] of [ResultState].
+/// Notes repository: mirrors the data source into a private [ValueNotifier] of [ResultState], newest note first.
 final class NotesRepositoryImpl implements NotesRepository, DisposableResource {
   /// Message shown when a note cannot be added.
   static const String _addFailedMessage = 'Could not add the note';
 
   /// Message shown when a note cannot be deleted.
   static const String _deleteFailedMessage = 'Could not delete the note';
+
+  /// Message shown when a note cannot be changed.
+  static const String _updateFailedMessage = 'Could not change the note';
 
   /// Message shown when the notes cannot be loaded.
   static const String _loadFailedMessage = 'Could not load the notes';
@@ -27,6 +30,9 @@ final class NotesRepositoryImpl implements NotesRepository, DisposableResource {
   static const String _addSuccessLog = 'AddNote: success — note ';
   static const String _addedLog = ' added';
   static const String _addFailureLog = 'AddNote: failure — ';
+  static const String _updateSuccessLog = 'UpdateNote: success — note ';
+  static const String _updatedLog = ' changed';
+  static const String _updateFailureLog = 'UpdateNote: failure — ';
   static const String _deleteSuccessLog = 'DeleteNote: success — note ';
   static const String _deletedLog = ' deleted';
   static const String _deleteFailureLog = 'DeleteNote: failure — ';
@@ -76,6 +82,18 @@ final class NotesRepositoryImpl implements NotesRepository, DisposableResource {
   }
 
   @override
+  Future<Result<void>> updateNote(String id, String text) async {
+    try {
+      final NoteModel model = await _dataSource.update(id, text);
+      _logger.i('$_updateSuccessLog${model.id}$_updatedLog');
+      return Result.ok;
+    } on Exception catch (e) {
+      _logger.e('$_updateFailureLog$e');
+      return const Result.failure(_updateFailedMessage);
+    }
+  }
+
+  @override
   Future<Result<void>> deleteNote(String id) async {
     try {
       await _dataSource.delete(id);
@@ -87,9 +105,13 @@ final class NotesRepositoryImpl implements NotesRepository, DisposableResource {
     }
   }
 
+  /// The notes, newest first.
   void _onNotes(List<NoteModel> models) {
-    _notes.value = ResultState.success(models.map(_toEntity).toList());
+    final List<Note> notes = models.map(_toEntity).toList()..sort(_newestFirst);
+    _notes.value = ResultState.success(notes);
   }
+
+  static int _newestFirst(Note a, Note b) => b.createdAt.compareTo(a.createdAt);
 
   void _onError(Object error) {
     _logger.e('$_watchFailureLog$error');

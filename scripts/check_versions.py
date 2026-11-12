@@ -30,7 +30,7 @@ PUBSPEC = templates.resolve().example_dir / "pubspec.yaml"
 DOC_FILES: list[Path] = templates.resolve().doc_files()
 
 # Packages whose versions are checked; a template's [packages] tracked replaces them
-TRACKED = ("get_it", "watch_it", "logger", "relic", "uuid", "flutter_lints")
+TRACKED = ("get_it", "watch_it", "logger", "uuid", "flutter_lints")
 
 PUB_API = "https://pub.dev/api/packages/{name}"
 CONSTRAINT = r"(^\s*{name}:\s*\^)(\d+\.\d+\.\d+)"

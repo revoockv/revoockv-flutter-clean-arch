@@ -10,3 +10,5 @@ Versions of this template. The skill itself has its own versions (`CHANGELOG.md`
   `Stream<Result<T>>`; blocs are the only use case callers.
 - Example: the notes app rebuilt on flutter_bloc, tests with `bloc_test`.
 - Lint: the watch_it rules are off; use cases may be imported in `blocs/` and `pages/` (`use_case_imports_in`).
+- Example: the app of `docs/example_app.md` — notes (add, edit, delete) and statistics over one placeholder
+  `AppDatabase` in core, with `NotesBloc`, `NoteActionsCubit`, `StatisticsBloc`, `HomeTabCubit`.

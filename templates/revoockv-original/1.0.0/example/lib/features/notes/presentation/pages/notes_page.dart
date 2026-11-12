@@ -1,27 +1,22 @@
 import 'package:example_app/core/domain/entities/result.dart';
 import 'package:example_app/core/domain/entities/result_state.dart';
 import 'package:example_app/core/presentation/theme.dart';
-import 'package:example_app/features/api_server/presentation/pages/api_server_page.dart';
 import 'package:flutter/material.dart';
 import 'package:watch_it/watch_it.dart';
 
+import '../../domain/entities/note.dart';
 import '../controllers/notes_controller.dart';
 import '../di/notes_getters.dart';
 import '../widgets/add_note_widget.dart';
+import '../widgets/edit_note_dialog_widget.dart';
 import '../widgets/notes_list_widget.dart';
 
-/// Notes screen: owns the [NotesController], calls the use cases and shows
+/// Notes tab: owns the [NotesController], calls the use cases and shows
 /// action errors as snackbars.
 ///
 /// Never rebuilds itself — `registerHandler` only runs the handler; the widgets below
 /// watch exactly what they show.
 final class NotesPage extends WatchingWidget {
-  /// Title of the app bar.
-  static const String _title = 'Notes';
-
-  /// Tooltip of the button that opens the API server settings.
-  static const String _apiServerTooltip = 'API server';
-
   /// Creates the page.
   const NotesPage({super.key});
 
@@ -29,32 +24,26 @@ final class NotesPage extends WatchingWidget {
   Widget build(BuildContext context) {
     final NotesController notesController = createOnce(_createNotesController, dispose: _disposeNotesController);
     registerHandler(target: notesController.addingStateController, handler: _onActionChanged);
+    registerHandler(target: notesController.updatingStateController, handler: _onActionChanged);
     registerHandler(target: notesController.deletingStateController, handler: _onActionChanged);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(_title),
-        actions: <Widget>[
-          IconButton(
-            icon: const Icon(Icons.wifi_tethering),
-            tooltip: _apiServerTooltip,
-            onPressed: () => _openApiServer(context),
+    return Padding(
+      padding: const EdgeInsets.all(AppTheme.spacingMedium),
+      child: Column(
+        children: <Widget>[
+          AddNoteWidget(
+            textController: notesController.noteTextController,
+            addingState: notesController.addingStateController,
+            onSubmit: () => _onAddPressed(notesController),
+          ),
+          const SizedBox(height: AppTheme.spacingMedium),
+          Expanded(
+            child: NotesListWidget(
+              onEdit: (Note note) => _onEditPressed(context, notesController, note),
+              onDelete: (String id) => _onDeletePressed(notesController, id),
+            ),
           ),
         ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(AppTheme.spacingMedium),
-        child: Column(
-          children: <Widget>[
-            AddNoteWidget(
-              textController: notesController.noteTextController,
-              addingState: notesController.addingStateController,
-              onSubmit: () => _onAddPressed(notesController),
-            ),
-            const SizedBox(height: AppTheme.spacingMedium),
-            Expanded(child: NotesListWidget(onDelete: (String id) => _onDeletePressed(notesController, id))),
-          ],
-        ),
       ),
     );
   }
@@ -62,10 +51,6 @@ final class NotesPage extends WatchingWidget {
   static NotesController _createNotesController() => NotesController();
 
   static void _disposeNotesController(NotesController notesController) => notesController.dispose();
-
-  void _openApiServer(BuildContext context) {
-    ApiServerPage.show(context);
-  }
 
   void _onActionChanged(BuildContext context, ResultState<void> state, void Function() cancel) {
     if (state is! FailureResultState<void>) return;
@@ -84,6 +69,20 @@ final class NotesPage extends WatchingWidget {
 
     addingStateController.value = ResultState.of(result);
     if (result.isSuccess) notesController.noteTextController.clear();
+  }
+
+  /// Asks for the new text of [note] and saves it; nothing happens when the dialog is cancelled.
+  Future<void> _onEditPressed(BuildContext context, NotesController notesController, Note note) async {
+    final String? text = await EditNoteDialogWidget.show(context, note.text);
+    if (text == null || notesController.isDisposed) return;
+    final ValueNotifier<ResultState<void>> updatingStateController = notesController.updatingStateController;
+    if (updatingStateController.value.isLoading) return;
+    updatingStateController.value = ResultState.loading;
+
+    final Result<void> result = await updateNoteUseCase(note.id, text);
+    if (notesController.isDisposed) return;
+
+    updatingStateController.value = ResultState.of(result);
   }
 
   /// Deletes the note with [id]; ignored while another one is being deleted.

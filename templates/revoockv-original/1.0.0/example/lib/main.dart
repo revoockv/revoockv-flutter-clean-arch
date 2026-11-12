@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'core/presentation/theme.dart';
 import 'di.dart';
-import 'features/notes/presentation/pages/notes_page.dart';
+import 'core/presentation/pages/home_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,7 +21,7 @@ final class ExampleAppWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       theme: ThemeData(colorSchemeSeed: AppTheme.seedColor),
-      home: const NotesPage(),
+      home: const HomePage(),
     );
   }
 }

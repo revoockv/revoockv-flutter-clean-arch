@@ -34,7 +34,6 @@ Quick answers; the file says the details. When in doubt, copy `rules/examples/au
 | Startup work | `Future<Impl> init()` returning `this` + `registerSingletonAsync` | `di/di_patterns.md` |
 | Release subscriptions | `DisposableResource` + `dispose: disposeResource` | `di/di_patterns.md` → "Dispose" |
 | Use cases for widgets | top-level getters in `<feature>_getters.dart` | `di/di_conventions.md` |
-| Serve use cases to other devices | an `api_server` feature (Relic) | `http/serving_http.md` |
 
 ## Conventions
 
