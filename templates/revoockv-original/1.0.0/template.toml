@@ -85,6 +85,10 @@ same_as_example = ["lib/core/", "lib/features/api_server/"]
 # The doc-only feature compiled in the example and linted on its own.
 doc_feature = "lib/features/auth"
 
+[packages]
+# Packages check_versions.py compares with pub.dev.
+tracked = ["get_it", "watch_it", "logger", "relic", "uuid", "flutter_lints"]
+
 [lint]
 # Rules this template turns off (none: all 30 apply).
 off = []

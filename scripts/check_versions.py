@@ -29,7 +29,7 @@ import templates  # noqa: E402
 PUBSPEC = templates.resolve().example_dir / "pubspec.yaml"
 DOC_FILES: list[Path] = templates.resolve().doc_files()
 
-# Packages whose versions the skill prescribes
+# Packages whose versions are checked; a template's [packages] tracked replaces them
 TRACKED = ("get_it", "watch_it", "logger", "relic", "uuid", "flutter_lints")
 
 PUB_API = "https://pub.dev/api/packages/{name}"
@@ -82,10 +82,11 @@ def main() -> int:
     parser.add_argument("--template", help="template (name@version) to check; default: the skill's default")
     args = parser.parse_args()
 
-    global PUBSPEC, DOC_FILES
+    global PUBSPEC, DOC_FILES, TRACKED
     template = templates.resolve(args.template)
     PUBSPEC = template.example_dir / "pubspec.yaml"
     DOC_FILES = template.doc_files()
+    TRACKED = tuple(template.data.get("packages", {}).get("tracked", TRACKED))
     print(f"Template {template.ref}")
 
     pinned = pinned_versions()

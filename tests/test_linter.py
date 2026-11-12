@@ -893,6 +893,19 @@ class TemplateConfigTest(unittest.TestCase):
         self.assertEqual(report.to_dict()["results"][0]["violations"][0]["severity"], "warning")
 
 
+class UseCaseImportsTest(unittest.TestCase):
+    def tearDown(self):
+        linter.USE_CASE_IMPORTS_IN = set()
+
+    def test_use_case_imports_allowed_only_in_listed_folders(self):
+        code = "import '../../domain/use_cases/add_note_use_case.dart';\n\nfinal class NotesBloc {}\n"
+        files = {"features/notes/presentation/blocs/notes_bloc.dart": code}
+        self.assertTrue(run(files, {"import_violation"}))
+        linter.USE_CASE_IMPORTS_IN = {"blocs"}
+        self.assertEqual(run(files, {"import_violation"}), [])
+        self.assertTrue(run({"features/notes/presentation/widgets/list_widget.dart": code}, {"import_violation"}))
+
+
 class ExampleAppTest(unittest.TestCase):
     def test_example_app_has_no_violations(self):
         with contextlib.redirect_stdout(io.StringIO()):

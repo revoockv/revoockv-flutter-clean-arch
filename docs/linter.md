@@ -1,6 +1,6 @@
 # Architecture linter
 
-The linter follows the project's template (`.clean_arch.toml`, else the default; `--template REF` for one run): `folder_naming` checks its `[structure]`, the rules of `[lint] off` do not run, those of `[lint] warn` are shown as warnings that `--strict` does not fail on, and `[lint.params]` sets the allowed numbers, the theme file and the spacing words.
+The linter follows the project's template (`.clean_arch.toml`, else the default; `--template REF` for one run): `folder_naming` checks its `[structure]`, the rules of `[lint] off` do not run, those of `[lint] warn` are shown as warnings that `--strict` does not fail on, and `[lint.params]` sets the allowed numbers, the theme file, the spacing words and the presentation folders that may import use cases.
 
 The linter script lives in the skill's `scripts/` folder. Never copy the script into the project.
 
