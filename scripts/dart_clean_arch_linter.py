@@ -47,7 +47,7 @@ Ignored paths (folders or files the linter does not see at all — not linted, n
   <skill>/.clean_arch_ignore     global, for every project
   <project>/.clean_arch_ignore   local, next to pubspec.yaml
   --ignore-paths <path> ...      for one run
-One path per line, relative to the project root (`lib/features/api_server/presentation/routes`),
+One path per line, relative to the project root (`lib/features/legacy`),
 globs allowed (`lib/features/*/presentation/dto`), `#` starts a comment.
 
 """
@@ -2582,7 +2582,7 @@ Examples:
     python scripts/dart_clean_arch_linter.py lib/features/song --json
     python scripts/dart_clean_arch_linter.py lib/features/song --strict
     python scripts/dart_clean_arch_linter.py lib/features/auth --ignore-files firebase_options.dart
-    python scripts/dart_clean_arch_linter.py --ignore-paths lib/features/api_server/presentation/routes
+    python scripts/dart_clean_arch_linter.py --ignore-paths lib/features/legacy
          """,
     )
     parser.add_argument("path", nargs="?", default="lib", help="Path to Dart files or directory (default: whole project lib)")

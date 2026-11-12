@@ -37,7 +37,7 @@ file of its topic. A subject the new template does the same way as its source st
 | `git` | branch types and names, commit and merge messages, subject length, what happens to merged branches, releases, tags |
 | `packages` | pinned packages and the SDK |
 | `workflow`, `decisions` | the order of work for a new feature, a refactor, a migration; quick "you need X → do Y" answers |
-| `example_feature`, `http` | optional: a worked feature in the rules, serving use cases over HTTP |
+| `example_feature` | optional: a worked feature that lives only in the rules |
 
 ## 3. template.toml
 
@@ -59,8 +59,8 @@ file of its topic. A subject the new template does the same way as its source st
 2. `[choices]` first: change the answers that differ, then `[structure]`, `[scaffold]`, `[lint]`.
 3. Rewrite the rule files of the changed topics; delete files and topics the template does not use (and their entries in
    `[rules]`).
-4. Rebuild `example/` by the new rules: the same app (notes: list, add, delete; tests on every layer) so templates can
-   be compared. Pin its packages in `example/pubspec.yaml` and `rules/packages/packages.md`.
+4. Rebuild `example/` by the new rules: the same app in every template (`docs/example_app.md`: notes and statistics
+   over a placeholder database; tests on every layer) so templates can be compared. Pin its packages in `example/pubspec.yaml` and `rules/packages/packages.md`.
 5. Run the linter on the example; for each rule that fires decide: the example breaks the template's rules (fix the
    example) or the rule does not fit the template (put it in `[lint] off`, say why in a comment).
 6. `python3 scripts/templates.py validate <name>` and `python3 scripts/selfcheck.py --template <name>@1.0.0`.

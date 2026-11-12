@@ -31,14 +31,14 @@ python3 <skill_base>/scripts/dart_clean_arch_linter.py --ignore-paths 'lib/featu
 
 The `path` positional argument is optional: omit it (or pass `lib`) for the whole project, or pass a single feature folder to narrow the scope. All flag combinations (`--strict`, `--rules`, `--json`, `--ignore`, `--ignore-paths`) work with either target.
 
-**Ignored paths.** Folders and files that are not part of the Flutter layers (for example the HTTP server folders, `rules/http/serving_http.md`) are listed in a hidden `.clean_arch_ignore`: one path per line, relative to the project root, globs allowed, `#` for comments. The linter does not see them at all — no file rules, no `folder_naming`. It reads two files and adds `--ignore-paths`:
+**Ignored paths.** Folders and files that are not part of the Flutter layers (for example generated code or a server living in the app) are listed in a hidden `.clean_arch_ignore`: one path per line, relative to the project root, globs allowed, `#` for comments. The linter does not see them at all — no file rules, no `folder_naming`. It reads two files and adds `--ignore-paths`:
 
 - `<project>/.clean_arch_ignore` — local, next to `pubspec.yaml` (commit it with the project);
 - `<skill_base>/.clean_arch_ignore` — global, for every project.
 
 ```
 # .clean_arch_ignore
-lib/core/presentation/routes
+lib/generated
 lib/features/*/presentation/routes
 lib/features/*/presentation/dto
 ```
