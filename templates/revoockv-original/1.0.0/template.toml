@@ -62,6 +62,8 @@ domain = ["entities", "repositories", "use_cases"]
 presentation = ["pages", "widgets", "di", "controllers"]
 
 [scaffold]
+# Stub files live in scaffold/{app,feature,subfeature}/ ({{feature}}, {{Feature}} … filled in).
+next_step = "call registerAndInit{{Feature}}() from registerAndInit() in lib/di.dart"
 # Files `init_feature --core` copies from the example.
 core_files = [
   "core/domain/entities/result.dart",

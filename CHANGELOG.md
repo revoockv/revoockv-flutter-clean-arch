@@ -19,7 +19,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 - `scripts/templates.py`: `list`, `show`, `rules`, `use`, `set-default`, `new`, `bump`, `validate`.
-- `templates/README.md`: how a template is built and how to make one; `docs/linter.md`: the linter (was in `SKILL.md`).
+- `docs/constructor.md` (the template constructor: what a template decides, `template.toml`, how to make, write, version
+  a template; `SKILL.md` only links to it); `docs/linter.md`: the linter (was in `SKILL.md`).
+- `init_feature.py` writes the template's stub files (`scaffold/{app,feature,subfeature}/*.tmpl`) instead of built-in
+  watch_it stubs.
 - The linter, `init_feature.py`, `check_versions.py` and `selfcheck.py` take `--template`; the linter skips the
   template's `[lint] off` rules, `init_feature` creates its `[structure]` folders and copies its core files,
   `selfcheck` checks every template version.
