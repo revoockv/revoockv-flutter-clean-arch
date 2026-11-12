@@ -1,6 +1,7 @@
-import 'package:example_app/core/domain/entities/result_state.dart';
+import 'package:example_app/core/data/data_sources/in_memory_app_database.dart';
 import 'package:example_app/core/domain/entities/result.dart';
-import 'package:example_app/features/notes/data/data_sources/in_memory_notes_data_source.dart';
+import 'package:example_app/core/domain/entities/result_state.dart';
+import 'package:example_app/features/notes/data/data_sources/database_notes_data_source.dart';
 import 'package:example_app/features/notes/data/repositories/notes_repository_impl.dart';
 import 'package:example_app/features/notes/domain/entities/note.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -19,38 +20,45 @@ List<Note> loadedNotes(NotesRepositoryImpl repository) => switch (repository.wat
 void main() {
   final Logger silent = Logger(level: Level.off);
 
-  test('mirrors the data source into watchNotes()', () async {
-    final InMemoryNotesDataSource dataSource = InMemoryNotesDataSource();
+  test('mirrors the data source, newest first; edits keep createdAt', () async {
+    DateTime clock = DateTime(2026, 11, 12, 9);
+    final DatabaseNotesDataSource dataSource = DatabaseNotesDataSource(
+      database: InMemoryAppDatabase(latency: Duration.zero),
+      now: () => clock,
+    );
     final NotesRepositoryImpl created = NotesRepositoryImpl(dataSource: dataSource, logger: silent);
     expect(created.watchNotes().value.isLoading, isTrue, reason: 'loading until the first event');
     final NotesRepositoryImpl repository = await created.init();
 
     expect(await repository.addNote('First'), isA<SuccessResult<void>>());
+    clock = DateTime(2026, 11, 12, 10);
+    await repository.addNote('Second');
     await flush();
-    final List<Note> notes = loadedNotes(repository);
-    expect(notes.map((Note n) => n.text), <String>['First']);
+    expect(loadedNotes(repository).map((Note n) => n.text), <String>['Second', 'First']);
 
-    await repository.deleteNote(notes.single.id);
+    final Note first = loadedNotes(repository).last;
+    clock = DateTime(2026, 11, 12, 11);
+    expect(await repository.updateNote(first.id, 'First, edited'), isA<SuccessResult<void>>());
     await flush();
-    expect(loadedNotes(repository), isEmpty);
+    final Note edited = loadedNotes(repository).last;
+    expect(edited.text, 'First, edited');
+    expect(edited.createdAt, DateTime(2026, 11, 12, 9));
+    expect(edited.updatedAt, DateTime(2026, 11, 12, 11));
 
+    await repository.deleteNote(first.id);
+    await flush();
+    expect(loadedNotes(repository).map((Note n) => n.text), <String>['Second']);
     await repository.dispose();
-    await dataSource.dispose();
   });
 
-  test('the data source gives every note its own id', () async {
-    final InMemoryNotesDataSource dataSource = InMemoryNotesDataSource();
-    final NotesRepositoryImpl repository =
-        await NotesRepositoryImpl(dataSource: dataSource, logger: silent).init();
+  test('changing a missing note is a human-readable failure', () async {
+    final NotesRepositoryImpl repository = await NotesRepositoryImpl(dataSource: memoryNotes(), logger: silent).init();
 
-    await repository.addNote('Same');
-    await repository.addNote('Same');
-    await flush();
-    final Set<String> ids = loadedNotes(repository).map((Note n) => n.id).toSet();
-    expect(ids, hasLength(2));
+    final Result<void> result = await repository.updateNote('missing', 'Text');
 
+    expect(result, isA<FailureResult<void>>());
+    expect((result as FailureResult<void>).error, 'Could not change the note');
     await repository.dispose();
-    await dataSource.dispose();
   });
 
   test('a stream error becomes FailureResultState with a human-readable message', () async {

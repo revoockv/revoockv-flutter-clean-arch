@@ -7,16 +7,19 @@ import '../di/notes_getters.dart';
 import 'note_tile_widget.dart';
 
 /// Live list of notes: a progress indicator while loading, the load error, or the notes.
-/// Forwards delete requests to [onDelete].
+/// Forwards edit requests to [onEdit] and delete requests to [onDelete].
 final class NotesListWidget extends WatchingWidget {
   /// Text shown when there are no notes.
   static const String _emptyText = 'No notes yet';
+
+  /// Called with the note to edit.
+  final ValueChanged<Note> onEdit;
 
   /// Called with the id of the note to delete.
   final ValueChanged<String> onDelete;
 
   /// Creates the list.
-  const NotesListWidget({required this.onDelete, super.key});
+  const NotesListWidget({required this.onEdit, required this.onDelete, super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +33,7 @@ final class NotesListWidget extends WatchingWidget {
         const Center(child: Text(_emptyText)),
       SuccessResultState<List<Note>>(:final List<Note> value) => ListView(
           children: <Widget>[
-            for (final Note note in value) NoteTileWidget(note: note, onDelete: onDelete),
+            for (final Note note in value) NoteTileWidget(note: note, onEdit: onEdit, onDelete: onDelete),
           ],
         ),
     };

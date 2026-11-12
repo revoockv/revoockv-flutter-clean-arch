@@ -7,6 +7,7 @@ void main() {
 
     expect(notesController.noteTextController.text, isEmpty);
     expect(notesController.addingStateController.value.isIdle, isTrue);
+    expect(notesController.updatingStateController.value.isIdle, isTrue);
     expect(notesController.deletingStateController.value.isIdle, isTrue);
     expect(notesController.isDisposed, isFalse);
     notesController.dispose();

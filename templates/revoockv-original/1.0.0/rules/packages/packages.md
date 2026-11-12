@@ -12,6 +12,4 @@ dev_dependencies:
   flutter_lints: ^6.0.0
 ```
 
-Only an app that serves its use cases over HTTP adds `relic: ^1.2.0` (`rules/http/serving_http.md`).
-
 The source of truth is `example/pubspec.yaml`. Before adding packages to a project, run `python3 <skill_base>/scripts/check_versions.py`: it compares the pins with the latest versions on pub.dev. When something is outdated, tell the user; `--update` bumps the pins in the example and the docs, then `scripts/selfcheck.py` must pass before the new versions are used.
