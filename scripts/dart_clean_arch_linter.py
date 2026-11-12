@@ -188,6 +188,9 @@ LAYOUT: dict[str, tuple[str, ...]] = {
     "presentation": ("pages", "widgets", "di", "controllers"),
 }
 
+# Presentation subfolders that may import use cases (the template's [lint.params] use_case_imports_in), e.g. blocs
+USE_CASE_IMPORTS_IN: set[str] = set()
+
 # Rules whose violations are warnings: shown, but `--strict` does not fail on them (the template's [lint] warn)
 WARN_RULES: set[str] = set()
 
@@ -972,13 +975,22 @@ def check_import_violation(result: AnalysisResult) -> None:
                 snippet=_line_at(content, i),
             ))
 
-        # Check for usecase imports
-        if re.search(r'use_?cases?/', stripped):
+        # Check for usecase imports (allowed in the template's use_case_imports_in folders)
+        if re.search(r'use_?cases?/', stripped) and _presentation_folder(result.file) not in USE_CASE_IMPORTS_IN:
             result.violations.append(Violation(
                 file=result.file, line=i, rule="import_violation",
                 message=f"Presentation layer must not import use cases directly — use <feature>_getters.dart",
                 snippet=_line_at(content, i),
             ))
+def _presentation_folder(path: str) -> str:
+    """The subfolder of presentation/ that holds [path] (`blocs`, `pages`…), or ''."""
+    parts = Path(path).parts
+    if "presentation" not in parts:
+        return ""
+    index = len(parts) - 1 - parts[::-1].index("presentation")
+    return parts[index + 1] if index + 2 < len(parts) else ""
+
+
 def check_setstate_usage(result: AnalysisResult) -> None:
     """Check for setState() calls."""
     content = _read_file(Path(result.file))
@@ -2423,9 +2435,9 @@ def configure(template: object) -> None:
     """Take the folders, warnings and parameters of a template (scripts/templates.py Template).
 
     `[structure]` → LAYOUT; `[lint] warn` → WARN_RULES; `[lint.params]`: `allowed_numbers`,
-    `theme_file`, `layout_name_words`.
+    `theme_file`, `layout_name_words`, `use_case_imports_in`.
     """
-    global LAYOUT, WARN_RULES, ALLOWED_NUMBERS, CORE_THEME_FILE, LAYOUT_NAME_WORDS
+    global LAYOUT, WARN_RULES, ALLOWED_NUMBERS, CORE_THEME_FILE, LAYOUT_NAME_WORDS, USE_CASE_IMPORTS_IN
     data = template.data  # type: ignore[attr-defined]
     lint = data.get("lint", {})
     params = lint.get("params", {})
@@ -2434,6 +2446,7 @@ def configure(template: object) -> None:
     ALLOWED_NUMBERS = set(params.get("allowed_numbers", ALLOWED_NUMBERS))
     CORE_THEME_FILE = str(params.get("theme_file", CORE_THEME_FILE))
     LAYOUT_NAME_WORDS = tuple(params.get("layout_name_words", LAYOUT_NAME_WORDS))
+    USE_CASE_IMPORTS_IN = set(params.get("use_case_imports_in", ()))
 
 
 def analyze(path: str, rules: set[str], json_output: bool = False, ignore_files: list[str] | None = None,

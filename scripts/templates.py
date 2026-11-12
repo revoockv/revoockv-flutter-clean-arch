@@ -43,7 +43,7 @@ REQUIRED_KEYS = ("name", "version", "description", "choices", "rules", "structur
 # A rule file longer than this costs context; validate warns about it.
 MAX_RULE_LINES = 250
 # Parameters of [lint.params] the linter reads (dart_clean_arch_linter.configure)
-LINT_PARAMS = {"allowed_numbers", "theme_file", "layout_name_words"}
+LINT_PARAMS = {"allowed_numbers", "theme_file", "layout_name_words", "use_case_imports_in"}
 COPY_IGNORE = shutil.ignore_patterns(".dart_tool", "build", "pubspec.lock", "__pycache__")
 
 
