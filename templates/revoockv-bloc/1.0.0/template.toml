@@ -9,7 +9,7 @@ author = "revoockv"
 [choices]
 # Short answers to "how is it done here?"; the rule files say the details.
 layers = ["data", "domain", "presentation"]
-core = "lib/core mirrors the feature layers: shared Result, theme, core providers (logger)"
+core = "lib/core mirrors the feature layers: shared Result, the app database, theme, core providers (logger, database), the home shell"
 app_state = "data lives in data sources and repositories (streams); what a screen shows lives in its Bloc/Cubit"
 state_manager = "flutter_bloc: a Bloc (events) for live data, a Cubit (methods) for actions and UI state"
 use_case_returns = ["Future<Result<T>> for actions", "Stream<Result<T>> for live data (Watch… use cases)"]

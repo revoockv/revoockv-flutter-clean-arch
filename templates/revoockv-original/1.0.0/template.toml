@@ -9,7 +9,7 @@ author = "revoockv"
 [choices]
 # Short answers to "how is it done here?"; the rule files say the details.
 layers = ["data", "domain", "presentation"]
-core = "lib/core mirrors the feature layers: shared Result, ResultState, DisposableResource, theme, core DI"
+core = "lib/core mirrors the feature layers: shared Result, ResultState, DisposableResource, the app database, theme, core DI, the home shell"
 app_state = "repositories: a private ValueNotifier, exposed only as ValueListenable"
 state_manager = "watch_it (watch, registerHandler, createOnce) over ValueNotifier"
 use_case_returns = ["Future<Result<T>> for actions", "ValueListenable<T> for live state (watch… use cases)"]

@@ -3,20 +3,29 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../domain/use_cases/add_note_use_case.dart';
 import '../../domain/use_cases/delete_note_use_case.dart';
+import '../../domain/use_cases/update_note_use_case.dart';
 import 'note_actions_state.dart';
 
-/// Adds and deletes notes; its state is the progress of the last action. One action at a time.
+/// Adds, changes and deletes notes; its state is the progress of the last action. One action at a time.
 final class NoteActionsCubit extends Cubit<NoteActionsState> {
   final AddNoteUseCase _addNoteUseCase;
+
+  final UpdateNoteUseCase _updateNoteUseCase;
 
   final DeleteNoteUseCase _deleteNoteUseCase;
 
   /// Creates the cubit.
-  NoteActionsCubit({required this._addNoteUseCase, required this._deleteNoteUseCase})
-      : super(const NoteActionsIdle());
+  NoteActionsCubit({
+    required this._addNoteUseCase,
+    required this._updateNoteUseCase,
+    required this._deleteNoteUseCase,
+  }) : super(const NoteActionsIdle());
 
   /// Adds a note with [text]; ignored while another action runs.
   Future<void> add(String text) => _run(NoteAction.added, () => _addNoteUseCase(text));
+
+  /// Gives the note with [id] the [text]; ignored while another action runs.
+  Future<void> update(String id, String text) => _run(NoteAction.updated, () => _updateNoteUseCase(id, text));
 
   /// Deletes the note with [id]; ignored while another action runs.
   Future<void> delete(String id) => _run(NoteAction.deleted, () => _deleteNoteUseCase(id));

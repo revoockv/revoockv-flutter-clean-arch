@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import 'core/presentation/di/core_di.dart';
 import 'features/notes/presentation/di/notes_di.dart';
+import 'features/statistics/presentation/di/statistics_di.dart';
 
 /// Every provider of the app, outermost first: core, then one widget per feature.
 final class AppProvidersWidget extends StatelessWidget {
@@ -14,7 +15,9 @@ final class AppProvidersWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CoreProvidersWidget(
-      child: NotesProvidersWidget(child: child),
+      child: NotesProvidersWidget(
+        child: StatisticsProvidersWidget(child: child),
+      ),
     );
   }
 }

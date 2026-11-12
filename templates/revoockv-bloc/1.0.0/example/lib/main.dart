@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'core/presentation/pages/home_page.dart';
 import 'core/presentation/theme.dart';
 import 'di.dart';
-import 'features/notes/presentation/pages/notes_page.dart';
 
 void main() {
   runApp(const ExampleAppWidget());
@@ -18,7 +18,7 @@ final class ExampleAppWidget extends StatelessWidget {
     return AppProvidersWidget(
       child: MaterialApp(
         theme: ThemeData(colorSchemeSeed: AppTheme.seedColor),
-        home: const NotesPage(),
+        home: const HomePage(),
       ),
     );
   }
