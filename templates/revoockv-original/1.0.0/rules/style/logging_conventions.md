@@ -2,7 +2,7 @@
 
 - Add `logger` to `pubspec.yaml` dependencies — the pinned version is in `SKILL.md` → "Packages".
 - Register Logger in core presentation DI: `lib/core/presentation/di/core_di.dart`.
-- Core DI is called first in `registerAndInit()` (in `lib/di.dart`) before any feature DI — see `references/di_patterns.md`:
+- Core DI is called first in `registerAndInit()` (in `lib/di.dart`) before any feature DI — see `rules/di/di_patterns.md`:
   ```dart
   Future<void> registerAndInit() async {
     await di.reset();

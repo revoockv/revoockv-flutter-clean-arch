@@ -1,6 +1,6 @@
 # Auth feature template (Clean Architecture + GetIt + ValueNotifier + watch_it)
 
-Packages (the pinned versions live in `assets/example_app/pubspec.yaml`; `scripts/check_versions.py` compares them with pub.dev):
+Packages (the pinned versions live in `example/pubspec.yaml`; `scripts/check_versions.py` compares them with pub.dev):
 
 ```yaml
 environment:
@@ -16,7 +16,7 @@ dev_dependencies:
   flutter_lints: ^6.0.0
 ```
 
-A complete, runnable app built with these rules (neutral notes feature, tests included): `assets/example_app/`.
+A complete, runnable app built with these rules (neutral notes feature, tests included): `example/`.
 
 This template is the golden path. When uncertain, copy it and rename only.
 
@@ -35,9 +35,9 @@ It enforces:
 
 ## Core
 
-Create (copy from `assets/example_app/lib/core/`, or run `scripts/init_feature.py --core`):
-- `lib/core/domain/entities/result.dart` — `references/result.md`
-- `lib/core/domain/entities/disposable_resource.dart` and `lib/core/presentation/di/core_di.dart` — `references/di_patterns.md`
+Create (copy from `example/lib/core/`, or run `scripts/init_feature.py --core`):
+- `lib/core/domain/entities/result.dart` — `rules/errors_models/result.md`
+- `lib/core/domain/entities/disposable_resource.dart` and `lib/core/presentation/di/core_di.dart` — `rules/di/di_patterns.md`
 - `lib/core/presentation/theme.dart` — values shared by several features (`SKILL.md` → "Constants")
 
 Use import (replace `your_app` with your package name):
@@ -414,7 +414,7 @@ final class WatchAuthStateUseCase {
 
 ## DI: `registerAndInitAuth()`
 
-The function in `lib/features/auth/presentation/di/auth_di.dart` (full file with imports: `references/di_patterns.md` → "Feature"). Bottom-up, lazy where possible:
+The function in `lib/features/auth/presentation/di/auth_di.dart` (full file with imports: `rules/di/di_patterns.md` → "Feature"). Bottom-up, lazy where possible:
 
 ```dart
 /// Registers the auth feature and starts its async initialization.
@@ -499,7 +499,7 @@ final class AuthStatusWidget extends WatchingWidget {
 
 ## Presentation UI: action result (UI controller + `registerHandler`)
 
-`SignInButtonWidget` and its `SignInController` (`presentation/controllers/sign_in_controller.dart`) — full code in `references/controllers.md` → "With a controller". The controller only holds `signingInStateController` (a `ValueNotifier<ResultState<void>>`); the button owns it with `createOnce`, calls `signInUseCase()` itself, watches `signingInStateController.value.isLoading` and shows a snackbar from `registerHandler(target: signInController.signingInStateController, handler: _onSigningInChanged)`.
+`SignInButtonWidget` and its `SignInController` (`presentation/controllers/sign_in_controller.dart`) — full code in `rules/state/controllers.md` → "With a controller". The controller only holds `signingInStateController` (a `ValueNotifier<ResultState<void>>`); the button owns it with `createOnce`, calls `signInUseCase()` itself, watches `signingInStateController.value.isLoading` and shows a snackbar from `registerHandler(target: signInController.signingInStateController, handler: _onSigningInChanged)`.
 
 ---
 

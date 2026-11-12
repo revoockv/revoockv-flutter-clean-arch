@@ -1,6 +1,6 @@
 # Reactive state patterns (minimal rebuilds)
 
-Syntax and the full contract: `references/reactive_state_syntax.md`.
+Syntax and the full contract: `rules/state/reactive_state_syntax.md`.
 
 ## One source, read-only outward
 

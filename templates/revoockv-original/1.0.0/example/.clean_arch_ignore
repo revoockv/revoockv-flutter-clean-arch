@@ -1,5 +1,5 @@
 # Paths the clean architecture linter skips entirely (relative to this folder, globs allowed).
-# The HTTP server folders are not part of the Flutter layers (references/serving_http.md).
+# The HTTP server folders are not part of the Flutter layers (rules/http/serving_http.md of the template).
 lib/core/presentation/dto
 lib/core/presentation/routes
 lib/features/*/presentation/dto

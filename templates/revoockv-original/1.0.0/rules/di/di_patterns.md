@@ -1,9 +1,9 @@
 # DI patterns (GetIt via `di` + ValueListenable + watch_it)
 
 Must follow:
-- `references/reactive_state_syntax.md`
-- `references/models_mapping.md`
-- `references/controllers.md`
+- `rules/state/reactive_state_syntax.md`
+- `rules/errors_models/models_mapping.md`
+- `rules/state/controllers.md`
 
 ## Files
 
@@ -150,7 +150,7 @@ final class AuthRepositoryImpl implements AuthRepository, DisposableResource {
     _logger.i(_disposeLog);
   }
 
-  // watchAuthState(), signIn(), signOut(), _onUser() — see references/feature_template_auth.md
+  // watchAuthState(), signIn(), signOut(), _onUser() — see rules/examples/feature_template_auth.md
 }
 ```
 
@@ -200,10 +200,10 @@ Future<void> main() async {
 
 | Moment | How | Why |
 |---|---|---|
-| Tests | each test registers a test DI of its feature (fake data sources) and `await di.reset()` in `tearDown` | Every test starts clean, no leaked subscriptions, no real backend — `references/testing.md` |
+| Tests | each test registers a test DI of its feature (fake data sources) and `await di.reset()` in `tearDown` | Every test starts clean, no leaked subscriptions, no real backend — `rules/testing/testing.md` |
 | App start | `await di.reset()` at the top of `registerAndInit()` | Safe re-initialization |
 | Desktop exit (optional) | `await di.reset()` from `AppLifecycleListener.onExitRequested` | Close a DB / files cleanly |
 
 On mobile, app close needs nothing — the OS kills the process. App-wide services (Logger, HTTP client) are not disposed separately.
 
-**UI-level controllers** (UI controllers, `TextEditingController`, `ScrollController`, `AnimationController`) are not in GetIt. Their owner disposes them: a `WatchingWidget` through `createOnce(…, dispose: …)`, a UI controller in its own `dispose()`, an `AnimationController` in `State.dispose()` — see `references/controllers.md` → "Owner and rebuilds".
+**UI-level controllers** (UI controllers, `TextEditingController`, `ScrollController`, `AnimationController`) are not in GetIt. Their owner disposes them: a `WatchingWidget` through `createOnce(…, dispose: …)`, a UI controller in its own `dispose()`, an `AnimationController` in `State.dispose()` — see `rules/state/controllers.md` → "Owner and rebuilds".

@@ -2606,11 +2606,23 @@ Examples:
     parser.add_argument("--ignore", nargs="*", help="Rules to ignore (comma-separated per arg)")
     parser.add_argument("--ignore-files", nargs="*", help="File patterns to skip entirely (glob or substring)")
     parser.add_argument("--ignore-paths", nargs="*", help="Project folders/files to skip entirely, relative to the project root (globs allowed); added to .clean_arch_ignore")
+    parser.add_argument("--template", help="Template (name@version) whose `lint.off` applies; default: the project's .clean_arch.toml, else the skill's default")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
 
     args = parser.parse_args()
 
     rules = _parse_rules(args.rules)
+
+    # Rules the template turns off (only when all rules run)
+    if args.rules == "all":
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import templates  # noqa: PLC0415
+
+        try:
+            rules -= set(templates.resolve(args.template, Path(args.path)).lint_off)
+        except templates.TemplateError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(2)
 
     # Remove ignored rules
     for ignore_arg in (args.ignore or []):

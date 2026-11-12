@@ -16,7 +16,10 @@ import unittest
 from pathlib import Path
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent
-EXAMPLE_LIB = SKILL_ROOT / "assets" / "example_app" / "lib"
+sys.path.insert(0, str(SKILL_ROOT / "scripts"))
+import templates  # noqa: E402
+
+EXAMPLE_LIB = templates.resolve().example_dir / "lib"
 
 _spec = importlib.util.spec_from_file_location("linter", SKILL_ROOT / "scripts" / "dart_clean_arch_linter.py")
 linter = importlib.util.module_from_spec(_spec)

@@ -128,7 +128,7 @@ Future<void> _onAddPressed(NotesController notesController) async {
 }
 ```
 
-Full code: `references/controllers.md`, `assets/example_app/lib/features/notes/presentation/pages/notes_page.dart`.
+Full code: `rules/state/controllers.md`, `example/lib/features/notes/presentation/pages/notes_page.dart`.
 
 ## Live data — in a repository
 

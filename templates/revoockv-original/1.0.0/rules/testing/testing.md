@@ -1,6 +1,6 @@
 # Testing
 
-Every pattern below is used in `assets/example_app/test/` and runs green in `scripts/selfcheck.py`.
+Every pattern below is used in `example/test/` and runs green in `scripts/selfcheck.py`.
 
 ## Layout
 
