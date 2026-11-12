@@ -1,0 +1,87 @@
+# revoockv-bloc 1.0.0 — clean architecture with Bloc/Cubit and dependencies in the widget tree.
+# The agent reads this file first, then only the rule files the task needs.
+
+name = "revoockv-bloc"
+version = "1.0.0"
+description = "Clean architecture on flutter_bloc: Bloc/Cubit own screen state, use cases for everything, dependencies in the widget tree"
+author = "revoockv"
+
+[choices]
+# Short answers to "how is it done here?"; the rule files say the details.
+layers = ["data", "domain", "presentation"]
+core = "lib/core mirrors the feature layers: shared Result, theme, core providers (logger)"
+app_state = "data lives in data sources and repositories (streams); what a screen shows lives in its Bloc/Cubit"
+state_manager = "flutter_bloc: a Bloc (events) for live data, a Cubit (methods) for actions and UI state"
+use_case_returns = ["Future<Result<T>> for actions", "Stream<Result<T>> for live data (Watch… use cases)"]
+streams = "data source → repository (models → entities, errors → Result.failure) → watch use case → Bloc (emit.forEach)"
+di = "the widget tree: <Feature>ProvidersWidget (MultiRepositoryProvider) per feature, AppProvidersWidget in lib/di.dart; blocs by BlocProvider on the page"
+ui_state = "in a Cubit (progress, last error); only Flutter controllers (TextEditingController) live in a StatefulWidget"
+who_calls_use_cases = "blocs and cubits only; widgets add events or call cubit methods"
+set_state = false
+errors = "own sealed Result<T> (Result.ok, success, failure); exceptions only in the logger"
+equality = "states, events and entities write == by hand where it is compared (no equatable: 3.x ignores runtimeType)"
+models = "DTO models in data/models with mapping to domain entities"
+ids = "UUID v4 created in the data source"
+tests = "every layer; blocs with bloc_test, pages with the real providers and a fake data source"
+git = "develop + <type>/<NNN>-<name> branches, [TYPE-NNN] commits, --no-ff merges, branches kept"
+
+[rules]
+# Topic → files (relative to this folder). Read only the topics of the task.
+workflow = ["rules/workflow.md"]
+decisions = ["rules/decisions.md"]
+structure = ["rules/structure/folder_structure.md"]
+state = ["rules/state/blocs.md", "rules/state/widget_rules.md"]
+di = ["rules/di/providers.md"]
+use_cases = ["rules/use_cases/use_case_naming.md"]
+errors_models = ["rules/errors_models/result.md", "rules/errors_models/models_mapping.md"]
+style = [
+  "rules/style/dart_style.md",
+  "rules/style/constants.md",
+  "rules/style/imports.md",
+  "rules/style/dartdoc_standard.md",
+  "rules/style/logging_conventions.md",
+]
+testing = ["rules/testing/testing.md"]
+git = ["rules/git/git_rules.md"]
+packages = ["rules/packages/packages.md"]
+
+[structure]
+# Folders of every feature (and of lib/core); init_feature creates them, folder_naming checks them.
+data = ["data_sources", "models", "repositories"]
+domain = ["entities", "repositories", "use_cases"]
+presentation = ["pages", "widgets", "blocs", "di"]
+
+[scaffold]
+# Stub files live in scaffold/{app,feature}/ ({{feature}}, {{Feature}} … filled in).
+next_step = "wrap the app in {{Feature}}ProvidersWidget inside AppProvidersWidget (lib/di.dart)"
+# Files `init_feature --core` copies from the example.
+core_files = [
+  "core/domain/entities/result.dart",
+  "core/presentation/di/core_di.dart",
+  "core/presentation/theme.dart",
+]
+
+[example]
+# The project built with every rule of this template; selfcheck verifies it.
+path = "example"
+package = "example_app"
+docs_package = "your_app"
+# The rules link to the example's files instead of copying code.
+doc_paths = []
+same_as_example = []
+
+[packages]
+# Packages check_versions.py compares with pub.dev.
+tracked = ["flutter_bloc", "bloc_test", "logger", "uuid", "flutter_lints"]
+
+[lint]
+# Rules of the watch_it model; this template has no watch_it, ValueNotifier state or GetIt.
+off = ["watching_widget", "watch_order", "value_listenable_exposure", "no_state_in_di", "no_controller_in_ui"]
+warn = []
+
+[lint.params]
+allowed_numbers = [-1, 0, 1, 2]
+theme_file = "core/presentation/theme.dart"
+layout_name_words = ["padding", "spacing", "gap", "margin", "inset"]
+# Blocs call use cases; pages create the blocs with the use cases from the tree.
+use_case_imports_in = ["blocs", "pages"]
