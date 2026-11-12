@@ -42,6 +42,8 @@ NAME = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 REQUIRED_KEYS = ("name", "version", "description", "choices", "rules", "structure", "example")
 # A rule file longer than this costs context; validate warns about it.
 MAX_RULE_LINES = 250
+# Parameters of [lint.params] the linter reads (dart_clean_arch_linter.configure)
+LINT_PARAMS = {"allowed_numbers", "theme_file", "layout_name_words"}
 COPY_IGNORE = shutil.ignore_patterns(".dart_tool", "build", "pubspec.lock", "__pycache__")
 
 
@@ -291,9 +293,14 @@ def problems(template: Template) -> tuple[list[str], list[str]]:
     sys.path.insert(0, str(SKILL_ROOT / "scripts"))
     from dart_clean_arch_linter import ALL_RULES  # noqa: PLC0415
 
-    unknown = sorted(set(template.lint_off) - ALL_RULES)
-    if unknown:
-        errors.append(f"lint.off: unknown rule(s) {', '.join(unknown)}")
+    lint = data.get("lint", {})
+    for key in ("off", "warn"):
+        unknown = sorted(set(lint.get(key, ())) - ALL_RULES)
+        if unknown:
+            errors.append(f"lint.{key}: unknown rule(s) {', '.join(unknown)}")
+    unknown_params = sorted(set(lint.get("params", {})) - LINT_PARAMS)
+    if unknown_params:
+        errors.append(f"lint.params: unknown {', '.join(unknown_params)}; known: {', '.join(sorted(LINT_PARAMS))}")
     return errors, warnings
 
 

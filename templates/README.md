@@ -27,10 +27,11 @@ template = "revoockv-original@1.0.0"   # or "revoockv-original" for its newest v
 | `name`, `version`, `description`, `author` | The template; `name` and `version` equal its folders |
 | `[choices]` | One short answer per subject (state manager, where app state lives, what use cases return, DI, …). The agent reads them first; the rule files say the details |
 | `[rules]` | Topic → rule files. Fixed topics the skill knows: `workflow`, `decisions`, `structure`, `state`, `di`, `use_cases`, `errors_models`, `style`, `testing`, `git`, `packages`, `example_feature`, `http`; a template may add its own |
-| `[structure]` | Layer → folders of every feature and of `lib/core` (`init_feature` creates them) |
+| `[structure]` | Layer → folders of every feature and of `lib/core`: `init_feature` creates them, the linter's `folder_naming` checks them |
 | `[scaffold]` | `core_files` that `init_feature --core` copies from the example |
 | `[example]` | `path`, `package`; `docs_package` used in the rules' imports; `doc_paths` (code blocks compiled in the example), `same_as_example` (blocks that must equal the example's files), `doc_feature` (a feature that lives only in the rules) |
-| `[lint]` | `off` — linter rules this template does not use |
+| `[lint]` | `off` — rules this template does not use; `warn` — rules shown as warnings (`--strict` does not fail on them) |
+| `[lint.params]` | `allowed_numbers` (numbers allowed outside `static const`), `theme_file` (shared values, relative to `lib/`), `layout_name_words` (names that make a constant a spacing value) |
 
 ## Make your own template
 

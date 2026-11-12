@@ -80,5 +80,15 @@ same_as_example = ["lib/core/", "lib/features/api_server/"]
 doc_feature = "lib/features/auth"
 
 [lint]
-# Linter rules this template turns off (none: all 30 apply).
+# Rules this template turns off (none: all 30 apply).
 off = []
+# Rules reported as warnings: shown, but `--strict` does not fail on them.
+warn = []
+
+[lint.params]
+# Numbers allowed outside `static const`.
+allowed_numbers = [-1, 0, 1, 2]
+# Shared values (spacing, sizes, colors) of every feature, relative to lib/.
+theme_file = "core/presentation/theme.dart"
+# Words of a private constant that make it a spacing value AppTheme may already have.
+layout_name_words = ["padding", "spacing", "gap", "margin", "inset"]
