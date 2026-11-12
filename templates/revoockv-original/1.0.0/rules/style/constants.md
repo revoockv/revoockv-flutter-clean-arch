@@ -17,30 +17,7 @@ class VideoPlayerErrorWidget extends StatelessWidget {
 
 **2. Shared by several features (spacing, sizes, colors) → public `static const` of `AppTheme` in core:**
 
-`lib/core/presentation/theme.dart`
-
-```dart
-import 'package:flutter/material.dart';
-
-/// Values shared by more than one feature: spacing, sizes, colors.
-///
-/// A value used by a single widget stays a private `static const` of that widget.
-final class AppTheme {
-  /// Small gap between related elements.
-  static const double spacingSmall = 8;
-
-  /// Default padding of screens and cards.
-  static const double spacingMedium = 16;
-
-  /// Large gap between sections.
-  static const double spacingLarge = 24;
-
-  /// Seed color of the app color scheme.
-  static const Color seedColor = Colors.indigo;
-
-  const AppTheme._();
-}
-```
+- `example/lib/core/presentation/theme.dart`
 
 Use it as `AppTheme.spacingMedium` (import `package:<your_app>/core/presentation/theme.dart`). There are no per-feature theme files.
 
@@ -49,6 +26,7 @@ Rules:
 - The same private constant (type, name, value) in two features is a shared value → move it to `AppTheme` (linter: `theme_import`).
 - A private spacing constant (`_padding`, `_spacing`, `_gap`, `_margin`, `_inset`) with a value that `AppTheme` already has must use `AppTheme` (linter: `theme_import`).
 - `magic_strings` and `magic_numbers` treat file-top-level `const Type _name = ...` as violations — only class-member `static const` is accepted.
+- Every number, string, color, size and font weight of a class is a `static const` declared right after the class line, before the constructor (linter: `static_const_order`); in a stateful widget it belongs to its `State` class.
 
 ## Magic Strings — Every Layer, No Exemptions
 

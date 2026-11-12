@@ -48,7 +48,11 @@ style = [
 testing = ["rules/testing/testing.md"]
 git = ["rules/git/git_rules.md"]
 packages = ["rules/packages/packages.md"]
-example_feature = ["rules/examples/feature_template_auth.md"]
+example_feature = [
+  "rules/examples/auth_domain.md",
+  "rules/examples/auth_data.md",
+  "rules/examples/auth_presentation.md",
+]
 http = ["rules/http/serving_http.md"]
 
 [structure]

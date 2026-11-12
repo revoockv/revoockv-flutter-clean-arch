@@ -179,7 +179,7 @@ void _onActionChanged(BuildContext context, ResultState<void> state, void Functi
 - The same works for a notifier of a UI controller: `registerHandler(target: notesController.addingStateController, handler: _onActionChanged)` — see `rules/state/controllers.md`.
 - `registerHandler` does not rebuild: put it as high as the reaction needs (the page), and `watch()` as low as possible (the widget that shows the value).
 - **The handler runs only on a change**, not for the value at the first build. When the current value must trigger the reaction too, pass `executeImmediately: true`.
-- **Which screen to show is not a reaction.** "Signed out → sign-in screen" is a `watch` + `switch` over the state that picks the widget (`AuthGateWidget` in `rules/examples/feature_template_auth.md`) — no navigation, no routes, and the first state counts.
+- **Which screen to show is not a reaction.** "Signed out → sign-in screen" is a `watch` + `switch` over the state that picks the widget (`AuthGateWidget` in `rules/examples/auth_presentation.md`) — no navigation, no routes, and the first state counts.
 
 ## The order rule
 

@@ -37,7 +37,7 @@ prints the files to read. Topics (`[rules]` of `template.toml`):
 | Packages and versions | `packages` |
 | Serving use cases over HTTP | `http` |
 
-Do not read every topic up front: each costs context.
+Do not read every topic up front: each costs context. A rule that names `example/<path>` points to working code in the template folder: open that file when you need the code.
 
 ## 3. Tools
 

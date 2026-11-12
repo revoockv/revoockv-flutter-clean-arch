@@ -38,6 +38,9 @@ import templates  # noqa: E402
 # A file block: a line that starts with `lib/....dart`, a blank line, then ```dart
 DOC_FILE_BLOCK = re.compile(r"^`(lib/[^`]+\.dart)`[^\n]*\n\n```dart\n(.*?)```", re.M | re.S)
 
+# A path of the example named in the rules: `example/lib/…`
+EXAMPLE_LINK = re.compile(r"`example/([^`\s]+)`")
+
 _failures: list[str] = []
 
 
@@ -113,6 +116,13 @@ def check_template(template: templates.Template, args: argparse.Namespace) -> No
     blocks = doc_blocks(template)
     print(f"  found {len(blocks)} file blocks in the rules")
     compare_core(template, blocks)
+    missing = sorted(
+        f"{doc.relative_to(template.folder)}: {path}"
+        for doc in template.doc_files()
+        for path in EXAMPLE_LINK.findall(doc.read_text(encoding="utf-8"))
+        if "*" not in path and not (template.example_dir / path).exists()
+    )
+    check(not missing, "every `example/…` path in the rules exists", "\n".join(missing))
 
     if args.no_flutter:
         return

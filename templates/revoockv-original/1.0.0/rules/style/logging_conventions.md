@@ -1,6 +1,6 @@
 # Logging conventions (logger package)
 
-- Add `logger` to `pubspec.yaml` dependencies — the pinned version is in `SKILL.md` → "Packages".
+- Add `logger` to `pubspec.yaml` dependencies — the pinned version is in `rules/packages/packages.md`.
 - Register Logger in core presentation DI: `lib/core/presentation/di/core_di.dart`.
 - Core DI is called first in `registerAndInit()` (in `lib/di.dart`) before any feature DI — see `rules/di/di_patterns.md`:
   ```dart
