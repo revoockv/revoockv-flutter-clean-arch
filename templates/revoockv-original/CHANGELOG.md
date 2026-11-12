@@ -6,3 +6,6 @@ Versions of this template. The skill itself has its own versions (`CHANGELOG.md`
 
 - The rules of the skill up to 0.9.0, split by topic (`rules/<topic>/`), with `template.toml` and the notes app as
   `example/`.
+- Shorter rules (3199 → 2344 lines): code that equals the example is a link to `example/<path>`, the auth feature is
+  split by layer (`examples/auth_{domain,data,presentation}.md`), `decisions.md` gives the answer itself, and
+  `workflow.md` / `widget_rules.md` no longer repeat `controllers.md` and `reactive_state_syntax.md`.

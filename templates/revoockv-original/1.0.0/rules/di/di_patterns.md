@@ -27,37 +27,8 @@ Must follow:
 
 ## Core
 
-`lib/core/domain/entities/disposable_resource.dart`
-
-```dart
-import 'dart:async';
-
-/// A class that owns resources (subscriptions, controllers, connections) and must release them.
-abstract interface class DisposableResource {
-  /// Releases every resource the class owns. Called by DI, never by UI or use cases.
-  FutureOr<void> dispose();
-}
-```
-
-`lib/core/presentation/di/core_di.dart`
-
-```dart
-import 'dart:async';
-
-import 'package:logger/logger.dart';
-import 'package:watch_it/watch_it.dart';
-
-import '../../domain/entities/disposable_resource.dart';
-
-/// GetIt `dispose:` callback: calls our [DisposableResource.dispose] if [instance] owns resources.
-FutureOr<void> disposeResource(Object instance) =>
-    instance is DisposableResource ? instance.dispose() : null;
-
-/// Registers app-wide services used by every feature.
-void registerAndInitCore() {
-  di.registerSingleton<Logger>(Logger());
-}
-```
+- `example/lib/core/domain/entities/disposable_resource.dart`
+- `example/lib/core/presentation/di/core_di.dart`
 
 `disposeResource` is the only place where DI meets our dispose contract: dropping get_it later means rewriting DI files only — data and domain stay untouched.
 
@@ -150,7 +121,7 @@ final class AuthRepositoryImpl implements AuthRepository, DisposableResource {
     _logger.i(_disposeLog);
   }
 
-  // watchAuthState(), signIn(), signOut(), _onUser() — see rules/examples/feature_template_auth.md
+  // watchAuthState(), signIn(), signOut(), _onUser() — see rules/examples/auth_data.md
 }
 ```
 
