@@ -10,9 +10,10 @@ folders get a `.gitkeep` so git keeps them.
     domain/entities|repositories|use_cases
     presentation/pages|widgets|di|controllers
 
-`--core` also copies the core files from assets/example_app (the verified
-reference): result.dart, disposable_resource.dart, result_state.dart, core_di.dart, theme.dart —
-and creates lib/di.dart with registerAndInit() when it is missing.
+The folders come from `[structure]` of the project's template (`.clean_arch.toml`, else
+the default template, or `--template`). `--core` also copies the template's
+`[scaffold] core_files` from its example (the verified reference) and creates
+lib/di.dart with registerAndInit() when it is missing.
 
 Usage:
   python3 scripts/init_feature.py --core
@@ -25,25 +26,18 @@ from __future__ import annotations
 
 import argparse
 import re
+import sys
 from pathlib import Path
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent
-EXAMPLE = SKILL_ROOT / "assets" / "example_app"
-EXAMPLE_PACKAGE = "example_app"
+sys.path.insert(0, str(SKILL_ROOT / "scripts"))
+import templates  # noqa: E402
 
-LAYOUT = {
-    "data": ("data_sources", "models", "repositories"),
-    "domain": ("entities", "repositories", "use_cases"),
-    "presentation": ("pages", "widgets", "di", "controllers"),
-}
-
-CORE_FILES = (
-    "core/domain/entities/result.dart",
-    "core/domain/entities/disposable_resource.dart",
-    "core/domain/entities/result_state.dart",
-    "core/presentation/di/core_di.dart",
-    "core/presentation/theme.dart",
-)
+# Set by main() from the project's template: its example, folders and core files
+EXAMPLE = Path()
+EXAMPLE_PACKAGE = ""
+LAYOUT: dict[str, tuple[str, ...]] = {}
+CORE_FILES: tuple[str, ...] = ()
 
 APP_DI = """import 'package:watch_it/watch_it.dart';
 
@@ -159,7 +153,17 @@ def main() -> None:
     parser.add_argument("--subfeature", default=None)
     parser.add_argument("--lib-dir", default="lib")
     parser.add_argument("--core", action="store_true")
+    parser.add_argument("--template", help="template (name@version); default: the project's .clean_arch.toml, else the skill's default")
     args = parser.parse_args()
+
+    global EXAMPLE, EXAMPLE_PACKAGE, LAYOUT, CORE_FILES
+    try:
+        template = templates.resolve(args.template, Path(args.lib_dir).resolve().parent)
+    except templates.TemplateError as e:
+        raise SystemExit(str(e)) from e
+    EXAMPLE, EXAMPLE_PACKAGE = template.example_dir, template.example_package
+    LAYOUT, CORE_FILES = template.layout, template.core_files
+    print(f"Template {template.ref}")
 
     if not args.core and not args.feature:
         raise SystemExit("Provide --feature <name> and/or --core.")
