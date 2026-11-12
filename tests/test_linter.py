@@ -838,6 +838,61 @@ class ControllerNoActionsTest(unittest.TestCase):
         self.assertEqual(run({CONTROLLERS + "tab_controller.dart": code}, self.RULES), [])
 
 
+class TemplateConfigTest(unittest.TestCase):
+    """The linter takes folders, warnings and parameters from a template."""
+
+    def setUp(self):
+        self.saved = (linter.LAYOUT, linter.WARN_RULES, linter.ALLOWED_NUMBERS, linter.CORE_THEME_FILE,
+                      linter.LAYOUT_NAME_WORDS)
+
+    def tearDown(self):
+        (linter.LAYOUT, linter.WARN_RULES, linter.ALLOWED_NUMBERS, linter.CORE_THEME_FILE,
+         linter.LAYOUT_NAME_WORDS) = self.saved
+
+    def _configure(self, **lint):
+        base = templates.resolve()
+        data = {**base.data, "structure": lint.pop("structure", base.data["structure"]), "lint": lint}
+        linter.configure(templates.Template(base.name, base.version, base.folder, data))
+
+    def test_folders_follow_the_template_structure(self):
+        self._configure(structure={"domain": ["entities", "use_cases"], "ui": ["screens"]})
+        found = run({
+            "features/notes/domain/entities/note.dart": "final class Note {}\n",
+            "features/notes/domain/repositories/notes_repository.dart": "abstract class NotesRepository {}\n",
+            "features/notes/ui/screens/notes_screen.dart": "final class NotesScreen {}\n",
+        }, {"folder_naming"})
+        self.assertEqual({rule for _, rule, _ in found}, {"folder_naming"})
+        found_ok = run({
+            "features/notes/domain/entities/note.dart": "final class Note {}\n",
+            "features/notes/domain/use_cases/add_note_use_case.dart": "final class AddNoteUseCase {}\n",
+            "features/notes/ui/screens/notes_screen.dart": "final class NotesScreen {}\n",
+        }, {"folder_naming"})
+        self.assertEqual(found_ok, [])
+
+    def test_allowed_numbers_come_from_params(self):
+        code = """
+            final class Box {
+              int size() => 8;
+            }
+        """
+        self.assertTrue(run({"features/notes/domain/entities/box.dart": code}, {"magic_numbers"}))
+        self._configure(params={"allowed_numbers": [0, 1, 8]})
+        self.assertEqual(run({"features/notes/domain/entities/box.dart": code}, {"magic_numbers"}), [])
+
+    def test_warn_rules_do_not_fail_strict(self):
+        self._configure(warn=["magic_numbers"])
+        code = "final class Box {\n  int size() => 8;\n}\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "lib" / "features/notes/domain/entities/box.dart"
+            path.parent.mkdir(parents=True)
+            path.write_text(code, encoding="utf-8")
+            with contextlib.redirect_stdout(io.StringIO()):
+                report = linter.analyze(str(Path(tmp) / "lib"), {"magic_numbers"}, json_output=True)
+        self.assertTrue(report.has_violations)
+        self.assertFalse(report.has_errors)
+        self.assertEqual(report.to_dict()["results"][0]["violations"][0]["severity"], "warning")
+
+
 class ExampleAppTest(unittest.TestCase):
     def test_example_app_has_no_violations(self):
         with contextlib.redirect_stdout(io.StringIO()):
