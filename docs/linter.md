@@ -1,5 +1,7 @@
 # Architecture linter
 
+The linter follows the project's template (`.clean_arch.toml`, else the default; `--template REF` for one run): `folder_naming` checks its `[structure]`, the rules of `[lint] off` do not run, those of `[lint] warn` are shown as warnings that `--strict` does not fail on, and `[lint.params]` sets the allowed numbers, the theme file and the spacing words.
+
 The linter script lives in the skill's `scripts/` folder. Never copy the script into the project.
 
 **Default target = the whole Flutter project.** When the user does not name a feature, run the linter with no path argument — it defaults to `lib` and walks every feature. Only when the user gives an exact feature path do you narrow the target to that single feature folder.
@@ -45,4 +47,4 @@ Add a path only when the user asks for it or when a reference says so — never 
 
 **30 rules:** `naming_file`, `naming_class`, `magic_numbers`, `magic_strings`, `magic_colors`, `widget_helpers`, `inline_callbacks`, `import_violation`, `setstate_usage`, `stateful_no_lifecycle`, `dartdoc_public`, `no_state_in_di`, `widget_stateless`, `watching_widget`, `no_controller_in_ui`, `static_const_order`, `no_build_return`, `folder_naming`, `async_gap_context_mounted`, `widget_key_parameter`, `controller_lifecycle`, `widget_methods`, `stateless_with_controllers`, `static_const_in_state_class`, `magic_numbers_in_layout`, `theme_import`, `value_listenable_exposure`, `watch_order`, `controller_naming`, `controller_no_actions`.
 
-All rules are enabled by default. Only disable a rule with `--ignore` when the user explicitly requests it.
+All rules the template does not turn off run. Only disable a rule with `--ignore` when the user explicitly requests it; to drop it for good, put it in the template's `[lint] off` (a new template version).

@@ -23,6 +23,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The linter, `init_feature.py`, `check_versions.py` and `selfcheck.py` take `--template`; the linter skips the
   template's `[lint] off` rules, `init_feature` creates its `[structure]` folders and copies its core files,
   `selfcheck` checks every template version.
+- Linter: `folder_naming` checks the template's `[structure]` (any layers and folders); `[lint] warn` rules are
+  warnings (`severity` in `--json`, `--strict` does not fail on them); `[lint.params]` sets `allowed_numbers`,
+  `theme_file`, `layout_name_words`. `templates.py validate` checks them.
 
 ---
 
