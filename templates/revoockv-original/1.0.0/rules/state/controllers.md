@@ -217,7 +217,7 @@ final class SignInButtonWidget extends WatchingWidget {
 
 Here the button is the lowest widget that shows the state, so it both owns and watches the controller. On a page the
 owner only reacts, and a small leaf widget watches the `ValueListenable` it gets —
-`assets/example_app/lib/features/notes/presentation/pages/notes_page.dart` (`AddNoteWidget(addingState: …)`).
+`example/lib/features/notes/presentation/pages/notes_page.dart` (`AddNoteWidget(addingState: …)`).
 
 Rules of the pattern:
 - **The use case is called by the owner** with its real arguments: `addSongUseCase(author: …, name: …)`,

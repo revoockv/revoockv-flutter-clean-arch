@@ -7,7 +7,7 @@ Packages:
 ## The contract: ValueNotifier inside, ValueListenable outside
 
 - The repository implementation owns a **private** `ValueNotifier<T>` and is the only place that writes `.value`.
-- A repository that mirrors a stream exposes `ValueListenable<ResultState<T>>`: `loading` until the first event, `success(value)` on every event, `failure(message)` on a stream error — never a bare `List<T>` that cannot tell "loading" and "could not load" from "empty" (`references/result_state.md`).
+- A repository that mirrors a stream exposes `ValueListenable<ResultState<T>>`: `loading` until the first event, `success(value)` on every event, `failure(message)` on a stream error — never a bare `List<T>` that cannot tell "loading" and "could not load" from "empty" (`rules/state/result_state.md`).
 - Everything outward — repository interface, watch use case, getter — is typed `ValueListenable<T>`. The UI cannot assign `.value`, so state changes only through action use cases (`Future<Result>`).
 - A watch use case `call()` must return the **same instance** every time (the repository field). Never build a new listenable per call.
 
@@ -176,10 +176,10 @@ void _onActionChanged(BuildContext context, ResultState<void> state, void Functi
 
 - `target:` takes the listenable directly — nothing extra goes into GetIt.
 - The handler is a private method `(BuildContext context, T value, void Function() cancel)`: no inline closure, `context` arrives as a parameter, `value` is fully typed. `cancel()` unsubscribes from inside the handler.
-- The same works for a notifier of a UI controller: `registerHandler(target: notesController.addingStateController, handler: _onActionChanged)` — see `references/controllers.md`.
+- The same works for a notifier of a UI controller: `registerHandler(target: notesController.addingStateController, handler: _onActionChanged)` — see `rules/state/controllers.md`.
 - `registerHandler` does not rebuild: put it as high as the reaction needs (the page), and `watch()` as low as possible (the widget that shows the value).
 - **The handler runs only on a change**, not for the value at the first build. When the current value must trigger the reaction too, pass `executeImmediately: true`.
-- **Which screen to show is not a reaction.** "Signed out → sign-in screen" is a `watch` + `switch` over the state that picks the widget (`AuthGateWidget` in `references/feature_template_auth.md`) — no navigation, no routes, and the first state counts.
+- **Which screen to show is not a reaction.** "Signed out → sign-in screen" is a `watch` + `switch` over the state that picks the widget (`AuthGateWidget` in `rules/examples/feature_template_auth.md`) — no navigation, no routes, and the first state counts.
 
 ## The order rule
 

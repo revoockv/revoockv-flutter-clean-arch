@@ -44,7 +44,7 @@ The `folder_naming` linter rule enforces this for both features and `core/`: **e
       - `<feature>_getters.dart` — top-level getters for use cases
       - `<subfeature>_di.dart` — optional subfeature DI
     - `controllers/` — UI controllers (UI state only, like Flutter's; `<name>_controller.dart`), only when the feature has UI state (progress of actions, form state); otherwise empty with `.gitkeep`
-    - optional, only in a feature that serves HTTP (`references/serving_http.md`) — not required, created only when used; listed in the project's `.clean_arch_ignore`, so `folder_naming` skips them:
+    - optional, only in a feature that serves HTTP (`rules/http/serving_http.md`) — not required, created only when used; listed in the project's `.clean_arch_ignore`, so `folder_naming` skips them:
       - `routes/` — `RouterInjectable` classes with the handlers (`*_routes.dart`)
       - `dto/` — API formats of requests and responses (`*_dto.dart`)
       - `middleware/` — Relic middleware, e.g. the token check (`*_middleware.dart`)
@@ -52,6 +52,6 @@ The `folder_naming` linter rule enforces this for both features and `core/`: **e
 ## Naming
 
 - Main DI: `lib/di.dart` — exposes `registerAndInit()`
-- Feature DI: `lib/features/<feature>/presentation/di/<feature>_di.dart` — exposes `registerAndInit<Feature>()`: registers the feature and starts its async `init()`s (see `references/di_patterns.md`).
+- Feature DI: `lib/features/<feature>/presentation/di/<feature>_di.dart` — exposes `registerAndInit<Feature>()`: registers the feature and starts its async `init()`s (see `rules/di/di_patterns.md`).
 - Feature getters: `lib/features/<feature>/presentation/di/<feature>_getters.dart`
 - Subfeature DI: `lib/features/<feature>/presentation/di/<subfeature>_di.dart`

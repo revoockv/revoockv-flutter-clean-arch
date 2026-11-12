@@ -638,7 +638,7 @@ middleware) is built before the repository that `CheckApiTokenUseCase` needs, so
   Use `test()`, not `testWidgets()` — the widget test binding replaces `HttpClient` with a fake.
 - The page with `registerAndInitApiServerForTest(FakeApiServerDataSource())`.
 
-See `assets/example_app/test/features/api_server/`.
+See `example/test/features/api_server/`.
 
 ## Try it
 
