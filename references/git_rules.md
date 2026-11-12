@@ -42,7 +42,7 @@ main           ← stable, always runnable, tagged with releases
    git switch develop
    git merge --no-ff feature/001-user-profile -m "[FEAT-001] merge user profile into develop"
    ```
-4. Delete the branch: `git branch -d feature/001-user-profile`
+4. Keep the branch: do **not** delete it after the merge. Work often has to be finished or corrected later, and the branch is where that continues (merge it again with `--no-ff` when done). Delete a branch only when the user asks: `git branch -d feature/001-user-profile`
 5. When `develop` is ready for a release, create a release branch — see "Release branches". `develop` is never merged into `main` directly.
 
 `--no-ff` always creates the merge commit, so its message follows the commit format, and `git log --grep="FEAT-001"` finds the work commits and the merge. Never keep Git's default `Merge branch '…'` message.
@@ -77,7 +77,7 @@ main ─────────────────────────
    git switch develop
    git merge --no-ff release/1.3.0 -m "[RELEASE-1.3.0] merge into develop"
    ```
-6. Delete the branch: `git branch -d release/1.3.0`
+6. Keep the branch (see "Branch flow"); delete it only when the user asks: `git branch -d release/1.3.0`
 
 ### Hotfix branches
 
@@ -96,7 +96,7 @@ For an urgent fix of the released version when `develop` already contains unrele
    git switch develop
    git merge --no-ff main -m "[HOTFIX-009] merge v1.3.1 into develop"
    ```
-5. Delete the branch: `git branch -d hotfix/009-crash-on-start`
+5. Keep the branch (see "Branch flow"); delete it only when the user asks: `git branch -d hotfix/009-crash-on-start`
 
 A bug found in `develop` (not released yet) is a normal `fix/` branch from `develop`.
 
