@@ -1,0 +1,2 @@
+# The template a project without `.clean_arch.toml` uses.
+default = "revoockv-original@1.0.0"

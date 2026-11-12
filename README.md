@@ -1,6 +1,6 @@
 # revoockv-flutter-clean-arch
 
-An agent skill (Claude Code, Cursor, Codex and other agents that read `SKILL.md`) for building Flutter apps with clean architecture on **GetIt + watch_it** and `ValueNotifier`-based reactive state.
+An agent skill (Claude Code, Cursor, Codex and other agents that read `SKILL.md`) for building Flutter apps with clean architecture by **templates**. A template holds every choice of the architecture and code style — folders, state manager, DI, use cases, errors, models, style, tests, git — split into small rule files, plus an example project built with all of it. The default template, `revoockv-original`, is clean architecture on **GetIt + watch_it** and `ValueNotifier`-based reactive state. Make your own template from it (`templates/README.md`); templates have their own versions, the skill has its own.
 
 The agent uses it to create features, refactor or migrate existing ones (from Riverpod, Bloc or streams), wire DI per feature, map data models to domain entities and build UI with as few and as low rebuilds as possible. A linter checks the result.
 
@@ -39,7 +39,7 @@ Ask the agent in plain words, for example:
 
 The agent follows `SKILL.md` and the references, then runs the linter.
 
-## What it enforces
+## What it enforces (template `revoockv-original`)
 
 - **Layers per feature:** `data` / `domain` / `presentation`; `core` mirrors the same layout.
 - **DI:** one `registerAndInit<Feature>()` per feature, registered by type in GetIt; widgets reach use cases only through `<feature>_getters.dart`.
@@ -53,19 +53,28 @@ The agent follows `SKILL.md` and the references, then runs the linter.
 ## Contents
 
 ```
-SKILL.md            the rules the agent follows
-DECISIONS.md        "you need X → use pattern Y" table
-references/         detailed rules and code templates (auth feature template, DI, state, widgets, tests, git…)
-assets/example_app/ runnable reference app (notes) built with every rule
-scripts/            linter, feature generator, version check, self-check
-tests/              linter unit tests
+SKILL.md                         how the agent finds the template and reads only what the task needs
+templates/index.toml             the default template
+templates/<name>/<version>/      template.toml (choices, topics), rules/<topic>/*.md, example/ (runnable app)
+templates/README.md              how templates are built and how to make one
+docs/linter.md                   the architecture linter
+scripts/                         templates, linter, feature generator, version check, self-check
+tests/                           linter unit tests
 ```
 
 ## Scripts
 
-Run them from the skill folder with Python 3.
+Run them from the skill folder with Python 3 (3.11+).
 
 ```bash
+# templates: list, show, choose, create, version, validate
+python3 scripts/templates.py list
+python3 scripts/templates.py show --project path/to/app
+python3 scripts/templates.py use revoockv-original@1.0.0 --project path/to/app
+python3 scripts/templates.py new my-arch --from revoockv-original@1.0.0
+python3 scripts/templates.py bump my-arch --to 1.1.0
+python3 scripts/templates.py validate --all
+
 # architecture linter (30 rules) on a Flutter project
 python3 scripts/dart_clean_arch_linter.py path/to/app/lib --strict
 
@@ -76,7 +85,7 @@ python3 scripts/init_feature.py --feature notes --lib-dir path/to/app/lib
 # pinned package versions vs pub.dev
 python3 scripts/check_versions.py
 
-# self-check: linter tests, versions, docs vs example, example app analyze/test/lint
+# self-check of every template: rules vs example, example analyze/test/lint
 python3 scripts/selfcheck.py
 ```
 
@@ -88,7 +97,7 @@ python3 scripts/selfcheck.py
 
 ## Versioning
 
-[Semantic Versioning](https://semver.org/); every change is in [CHANGELOG.md](CHANGELOG.md).
+[Semantic Versioning](https://semver.org/) for the skill ([CHANGELOG.md](CHANGELOG.md)) and, separately, for every template (`templates/<name>/CHANGELOG.md`).
 
 ## License
 

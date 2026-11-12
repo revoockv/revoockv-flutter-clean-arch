@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased]
+
+### Changed (breaking) — templates
+- The rules are a **template**: `templates/revoockv-original/1.0.0/` holds them split by topic (`rules/<topic>/*.md`),
+  `template.toml` (the choices, topic → rule files, folders, core files, example, lint rules off) and the notes app as
+  `example/`. `references/`, `DECISIONS.md` (now `rules/decisions.md`) and `assets/example_app/` are gone.
+- `SKILL.md` is a short router: find the project's template, then read only the topics of the task.
+- A project chooses its template in `.clean_arch.toml` (`template = "name@version"`); without it the default of
+  `templates/index.toml` applies.
+- Templates have their own versions (`templates/<name>/<version>/`, `templates/<name>/CHANGELOG.md`); the skill keeps its own.
+
+### Added
+- `scripts/templates.py`: `list`, `show`, `rules`, `use`, `set-default`, `new`, `bump`, `validate`.
+- `templates/README.md`: how a template is built and how to make one; `docs/linter.md`: the linter (was in `SKILL.md`).
+- The linter, `init_feature.py`, `check_versions.py` and `selfcheck.py` take `--template`; the linter skips the
+  template's `[lint] off` rules, `init_feature` creates its `[structure]` folders and copies its core files,
+  `selfcheck` checks every template version.
+
+---
+
 ## [0.9.0] - 2026-11-09
 
 ### Changed (breaking) — Controllers are Flutter-style UI state
