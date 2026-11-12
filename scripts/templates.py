@@ -178,7 +178,8 @@ def cmd_list(_: argparse.Namespace) -> int:
 def cmd_show(args: argparse.Namespace) -> int:
     template = resolve(args.ref, args.project)
     data = template.data
-    print(f"{template.ref} — {data.get('description', '')}\n")
+    print(f"{template.ref} — {data.get('description', '')}")
+    print(f"folder: {template.folder}  (rule paths below and `example/…` paths in the rules are relative to it)\n")
     for key, value in data["choices"].items():
         shown = "; ".join(value) if isinstance(value, list) else str(value).lower() if isinstance(value, bool) else value
         print(f"  {key}: {shown}")

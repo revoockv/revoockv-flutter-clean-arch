@@ -26,6 +26,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Linter: `folder_naming` checks the template's `[structure]` (any layers and folders); `[lint] warn` rules are
   warnings (`severity` in `--json`, `--strict` does not fail on them); `[lint.params]` sets `allowed_numbers`,
   `theme_file`, `layout_name_words`. `templates.py validate` checks them.
+- `selfcheck` checks that every `example/…` path named in the rules exists; `templates.py show` prints the template folder.
 
 ---
 
