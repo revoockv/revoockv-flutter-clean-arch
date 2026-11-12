@@ -30,6 +30,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   warnings (`severity` in `--json`, `--strict` does not fail on them); `[lint.params]` sets `allowed_numbers`,
   `theme_file`, `layout_name_words`. `templates.py validate` checks them.
 - `selfcheck` checks that every `example/…` path named in the rules exists; `templates.py show` prints the template folder.
+- Template `revoockv-bloc` 1.0.0: clean architecture on flutter_bloc with dependencies in the widget tree, made with the
+  constructor; its notes example passes analyze, tests and the linter.
+- Linter: `[lint.params] use_case_imports_in`; `check_versions.py` checks the template's `[packages] tracked`.
 
 ---
 

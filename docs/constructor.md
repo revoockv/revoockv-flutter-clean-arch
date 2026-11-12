@@ -50,7 +50,8 @@ file of its topic. A subject the new template does the same way as its source st
 | `[scaffold]` | `core_files` that `init_feature --core` copies from the example; `next_step` printed after `--feature`. Stub files are in the version folder's `scaffold/app/` (under `lib/` with `--core`), `scaffold/feature/` and `scaffold/subfeature/` (under the feature) as `*.tmpl`, with `{{feature}}`, `{{Feature}}`, `{{subfeature}}`, `{{Subfeature}}`, `{{package}}` filled in |
 | `[example]` | `path`, `package`; `docs_package` (package name in the rules' imports); `doc_paths` (code blocks of the rules compiled in the example), `same_as_example` (blocks that must equal the example's files), `doc_feature` (a feature that lives only in the rules) |
 | `[lint]` | `off` — rules the template does not use; `warn` — rules shown as warnings (`--strict` does not fail on them) |
-| `[lint.params]` | `allowed_numbers`, `theme_file` (relative to `lib/`), `layout_name_words` |
+| `[lint.params]` | `allowed_numbers`, `theme_file` (relative to `lib/`), `layout_name_words`, `use_case_imports_in` (presentation folders that may import use cases) |
+| `[packages]` | `tracked` — packages `check_versions.py` compares with pub.dev |
 
 ## 4. Make a template
 
@@ -84,11 +85,12 @@ file of its topic. A subject the new template does the same way as its source st
 
 ## 7. The linter and other state managers
 
-The linter's rules were written with watch_it + `ValueNotifier`. These rules check that model and are off in
-templates that do not use it: `watching_widget`, `watch_order`, `no_state_in_di`, `value_listenable_exposure`,
-`no_controller_in_ui`, `controller_lifecycle`, `stateless_with_controllers`, `import_violation` (it expects widgets to
-reach use cases through `<feature>_getters.dart`). The other rules (names, folders, magic values, dartdoc, widget shape,
-`setState`, `context.mounted`, theme) are general.
+The linter's rules were written with watch_it + `ValueNotifier`. Tried on `revoockv-bloc`, these check that model and
+are off in templates without it: `watching_widget`, `watch_order`, `value_listenable_exposure`, `no_state_in_di`,
+`no_controller_in_ui`. `import_violation` stays on — it keeps widgets away from repositories and the data layer — and
+`[lint.params] use_case_imports_in` lists the presentation folders that may import use cases (`["blocs", "pages"]`
+there). The other rules (names, folders, magic values, dartdoc, widget shape, `setState`, controller lifecycle,
+`context.mounted`, theme) are general.
 
 ## 8. Commands
 
