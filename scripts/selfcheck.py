@@ -1,20 +1,23 @@
 #!/usr/bin/env python3
 """
-Self-check of the skill: the docs, the linter and the example app must agree.
+Self-check of the skill: for every template, its rules, the linter and its example must agree.
 
 Steps:
   1. linter unit tests            python3 -m unittest discover -s tests
-  2. package versions             scripts/check_versions.py (report; --strict-versions fails on outdated)
-  3. code in the docs vs example  every ```dart block whose line above is a `lib/core/...dart` or
-                                  `lib/features/api_server/...dart` path must equal the example's file
-  4. example app                  copy of assets/example_app → flutter pub get, analyze, test, linter --strict
-  5. auth template from the docs  every ```dart block under a `lib/features/auth/...dart` path is written
-                                  into the copy of the example app and must pass flutter analyze and the linter
+  For each template version (or --template):
+  2. template                     scripts/templates.py validate (files, keys, sizes)
+  3. package versions             scripts/check_versions.py (report; --strict-versions fails on outdated)
+  4. code in the rules vs example every ```dart block whose line above is a path under `[example] same_as_example`
+                                  must equal the example's file
+  5. example                      copy of example/ → flutter pub get, analyze, test, linter --strict
+  6. feature from the rules       every ```dart block under `[example] doc_paths` is written into the copy of
+                                  the example and must pass flutter analyze and the linter
 
 Usage:
-  python3 scripts/selfcheck.py              # everything
-  python3 scripts/selfcheck.py --no-flutter # steps 1-3 only
-  python3 scripts/selfcheck.py --keep       # keep the temp project and print its path
+  python3 scripts/selfcheck.py                                   # every template
+  python3 scripts/selfcheck.py --template revoockv-original@1.0.0
+  python3 scripts/selfcheck.py --no-flutter                      # without the Flutter steps
+  python3 scripts/selfcheck.py --keep                            # keep the temp projects
 """
 
 from __future__ import annotations
@@ -28,22 +31,15 @@ import tempfile
 from pathlib import Path
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent
-EXAMPLE = SKILL_ROOT / "assets" / "example_app"
 LINTER = SKILL_ROOT / "scripts" / "dart_clean_arch_linter.py"
-DOC_FILES = [SKILL_ROOT / "SKILL.md", *sorted((SKILL_ROOT / "references").glob("*.md"))]
-
-# Docs use this package name in imports; the example app uses its own
-DOCS_PACKAGE = "your_app"
-EXAMPLE_PACKAGE = "example_app"
-
-# Doc code blocks checked by compiling: core files and the auth template
-DOC_PATH_PREFIXES = ("lib/core/", "lib/features/auth/", "lib/features/api_server/")
-
-# Doc blocks that must equal the example app file by file
-EXAMPLE_PATH_PREFIXES = ("lib/core/", "lib/features/api_server/")
+sys.path.insert(0, str(SKILL_ROOT / "scripts"))
+import templates  # noqa: E402
 
 # A file block: a line that starts with `lib/....dart`, a blank line, then ```dart
 DOC_FILE_BLOCK = re.compile(r"^`(lib/[^`]+\.dart)`[^\n]*\n\n```dart\n(.*?)```", re.M | re.S)
+
+# A path of the example named in the rules: `example/lib/…`
+EXAMPLE_LINK = re.compile(r"`example/([^`\s]+)`")
 
 _failures: list[str] = []
 
@@ -66,27 +62,30 @@ def run(cmd: list[str], cwd: Path) -> tuple[bool, str]:
     return proc.returncode == 0, proc.stdout + proc.stderr
 
 
-def doc_blocks() -> dict[str, str]:
-    """Return {lib path: code} of doc file blocks for core and the auth template."""
+def doc_blocks(template: templates.Template) -> dict[str, str]:
+    """Return {lib path: code} of the rules' file blocks under `[example] doc_paths`."""
+    example = template.data["example"]
+    prefixes = tuple(example.get("doc_paths", ()))
     blocks: dict[str, str] = {}
-    for doc in DOC_FILES:
+    for doc in template.doc_files():
         for path, code in DOC_FILE_BLOCK.findall(doc.read_text(encoding="utf-8")):
-            if not path.startswith(DOC_PATH_PREFIXES):
+            if not path.startswith(prefixes):
                 continue
-            code = code.replace(f"package:{DOCS_PACKAGE}/", f"package:{EXAMPLE_PACKAGE}/")
+            code = code.replace(f"package:{example.get('docs_package', 'your_app')}/", f"package:{template.example_package}/")
             if path in blocks and blocks[path] != code:
                 check(False, f"{path} is defined twice in the docs with different code ({doc.name})")
             blocks[path] = code
     return blocks
 
 
-def compare_core(blocks: dict[str, str]) -> None:
+def compare_core(template: templates.Template, blocks: dict[str, str]) -> None:
+    prefixes = tuple(template.data["example"].get("same_as_example", ()))
     for path, code in sorted(blocks.items()):
-        if not path.startswith(EXAMPLE_PATH_PREFIXES):
+        if not path.startswith(prefixes):
             continue
-        example_file = EXAMPLE / path
+        example_file = template.example_dir / path
         same = example_file.is_file() and example_file.read_text(encoding="utf-8") == code
-        check(same, f"docs {path} == example app", "" if same else "the docs and assets/example_app differ — update one of them")
+        check(same, f"rules {path} == example", "" if same else "the rules and example/ differ — update one of them")
 
 
 def flutter_checks(project: Path, label: str) -> None:
@@ -99,54 +98,83 @@ def flutter_checks(project: Path, label: str) -> None:
     check(ok, f"{label}: flutter analyze", out)
 
 
+def check_template(template: templates.Template, args: argparse.Namespace) -> None:
+    print(f"\n══ {template.ref}")
+    step("2. Template")
+    errors, warnings = templates.problems(template)
+    for warning in warnings:
+        print(f"  ! {warning}")
+    check(not errors, "templates.py validate", "\n".join(errors))
+
+    step("3. Package versions")
+    cmd = [sys.executable, str(SKILL_ROOT / "scripts" / "check_versions.py"), "--template", template.ref]
+    ok, out = run(cmd + (["--strict"] if args.strict_versions else []), SKILL_ROOT)
+    print("  " + out.strip().replace("\n", "\n  "))
+    check(ok, "versions" + (" (strict)" if args.strict_versions else " (report only)"))
+
+    step("4. Code in the rules vs the example")
+    blocks = doc_blocks(template)
+    print(f"  found {len(blocks)} file blocks in the rules")
+    compare_core(template, blocks)
+    missing = sorted(
+        f"{doc.relative_to(template.folder)}: {path}"
+        for doc in template.doc_files()
+        for path in EXAMPLE_LINK.findall(doc.read_text(encoding="utf-8"))
+        if "*" not in path and not (template.example_dir / path).exists()
+    )
+    check(not missing, "every `example/…` path in the rules exists", "\n".join(missing))
+
+    if args.no_flutter:
+        return
+    tmp = Path(tempfile.mkdtemp(prefix="clean_arch_selfcheck_"))
+    project = tmp / template.example_package
+    shutil.copytree(template.example_dir, project, ignore=templates.COPY_IGNORE)
+    (project / templates.PROJECT_FILE).write_text(f'template = "{template.ref}"\n', encoding="utf-8")
+
+    step("5. Example")
+    flutter_checks(project, "example")
+    ok, out = run(["flutter", "test"], project)
+    check(ok, "example: flutter test", out)
+    ok, out = run([sys.executable, str(LINTER), "lib", "--strict"], project)
+    check(ok, "example: linter --strict", out)
+
+    feature = template.data["example"].get("doc_feature")
+    if blocks and feature:
+        step("6. Feature from the rules, compiled inside the example")
+        for path, code in blocks.items():
+            target = project / path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(code, encoding="utf-8")
+        ok, out = run(["flutter", "analyze"], project)
+        check(ok, "rules: flutter analyze", out)
+        ok, out = run([sys.executable, str(LINTER), feature, "--strict", "--ignore", "folder_naming"], project)
+        check(ok, f"rules: linter --strict ({feature})", out)
+
+    if args.keep:
+        print(f"\n  temp project: {project}")
+    else:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--no-flutter", action="store_true", help="skip steps that need the Flutter SDK")
     parser.add_argument("--strict-versions", action="store_true", help="fail when a package is outdated")
-    parser.add_argument("--keep", action="store_true", help="keep the temp project")
+    parser.add_argument("--keep", action="store_true", help="keep the temp projects")
+    parser.add_argument("--template", help="check only this template (name@version)")
     args = parser.parse_args()
 
     step("1. Linter unit tests")
     ok, out = run([sys.executable, "-m", "unittest", "discover", "-s", "tests"], SKILL_ROOT)
     check(ok, "tests/test_linter.py", out)
 
-    step("2. Package versions")
-    cmd = [sys.executable, str(SKILL_ROOT / "scripts" / "check_versions.py")]
-    ok, out = run(cmd + (["--strict"] if args.strict_versions else []), SKILL_ROOT)
-    print("  " + out.strip().replace("\n", "\n  "))
-    check(ok, "versions" + (" (strict)" if args.strict_versions else " (report only)"))
-
-    step("3. Code in the docs vs the example app")
-    blocks = doc_blocks()
-    check(bool(blocks), f"found {len(blocks)} file blocks in the docs")
-    compare_core(blocks)
-
-    if not args.no_flutter:
-        tmp = Path(tempfile.mkdtemp(prefix="clean_arch_selfcheck_"))
-        project = tmp / EXAMPLE_PACKAGE
-        shutil.copytree(EXAMPLE, project, ignore=shutil.ignore_patterns(".dart_tool", "build", "pubspec.lock"))
-
-        step("4. Example app")
-        flutter_checks(project, "example app")
-        ok, out = run(["flutter", "test"], project)
-        check(ok, "example app: flutter test", out)
-        ok, out = run([sys.executable, str(LINTER), "lib", "--strict"], project)
-        check(ok, "example app: linter --strict", out)
-
-        step("5. Auth template from the docs, compiled inside the example app")
-        for path, code in blocks.items():
-            target = project / path
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(code, encoding="utf-8")
-        ok, out = run(["flutter", "analyze"], project)
-        check(ok, "docs: flutter analyze", out)
-        ok, out = run([sys.executable, str(LINTER), "lib/features/auth", "--strict", "--ignore", "folder_naming"], project)
-        check(ok, "docs: linter --strict (auth template)", out)
-
-        if args.keep:
-            print(f"\n  temp project: {project}")
-        else:
-            shutil.rmtree(tmp, ignore_errors=True)
+    refs = (
+        [templates.load(args.template).ref]
+        if args.template
+        else [f"{n}{templates.SEPARATOR}{v}" for n in templates.names() for v in templates.versions(n)]
+    )
+    for ref in refs:
+        check_template(templates.load(ref), args)
 
     print()
     if _failures:

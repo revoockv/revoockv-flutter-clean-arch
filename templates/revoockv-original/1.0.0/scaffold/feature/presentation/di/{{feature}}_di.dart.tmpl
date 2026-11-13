@@ -1,0 +1,10 @@
+/// Registers the {{feature}} feature and starts its async initialization.
+///
+/// Called from `registerAndInit()` in `lib/di.dart`; `di.allReady()` waits for its `init()`s.
+void registerAndInit{{Feature}}() {
+  // import 'package:watch_it/watch_it.dart'; and register bottom-up:
+  // 1. data sources — di.registerLazySingleton<...>(..., dispose: disposeResource)
+  // 2. repositories — di.registerSingletonAsync<...>(() => Impl(...).init(), dispose: disposeResource)
+  //    or di.registerLazySingleton<...>(...) when there is no startup work
+  // 3. use cases — di.registerLazySingleton<...>(() => UseCase(di<Repository>()))
+}

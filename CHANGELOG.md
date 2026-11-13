@@ -6,6 +6,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.10.0] - 2026-11-13
+
+### Changed (breaking) — templates
+- The rules are a **template**: `templates/revoockv-original/1.0.0/` holds them split by topic (`rules/<topic>/*.md`),
+  `template.toml` (the choices, topic → rule files, folders, core files, example, lint rules off) and the notes app as
+  `example/`. `references/`, `DECISIONS.md` (now `rules/decisions.md`) and `assets/example_app/` are gone.
+- `SKILL.md` is a short router: find the project's template, then read only the topics of the task.
+- A project chooses its template in `.clean_arch.toml` (`template = "name@version"`); without it the default of
+  `templates/index.toml` applies.
+- Templates have their own versions (`templates/<name>/<version>/`, `templates/<name>/CHANGELOG.md`); the skill keeps its own.
+
+### Added
+- `scripts/templates.py`: `list`, `show`, `rules`, `use`, `set-default`, `new`, `bump`, `validate`.
+- `docs/constructor.md` (the template constructor: what a template decides, `template.toml`, how to make, write, version
+  a template; `SKILL.md` only links to it); `docs/linter.md`: the linter (was in `SKILL.md`).
+- `init_feature.py` writes the template's stub files (`scaffold/{app,feature,subfeature}/*.tmpl`) instead of built-in
+  watch_it stubs.
+- The linter, `init_feature.py`, `check_versions.py` and `selfcheck.py` take `--template`; the linter skips the
+  template's `[lint] off` rules, `init_feature` creates its `[structure]` folders and copies its core files,
+  `selfcheck` checks every template version.
+- Linter: `folder_naming` checks the template's `[structure]` (any layers and folders); `[lint] warn` rules are
+  warnings (`severity` in `--json`, `--strict` does not fail on them); `[lint.params]` sets `allowed_numbers`,
+  `theme_file`, `layout_name_words`. `templates.py validate` checks them.
+- `selfcheck` checks that every `example/…` path named in the rules exists; `templates.py show` prints the template folder.
+- Template `revoockv-bloc` 1.0.0: clean architecture on flutter_bloc with dependencies in the widget tree, made with the
+  constructor; its notes example passes analyze, tests and the linter.
+- Linter: `[lint.params] use_case_imports_in`; `check_versions.py` checks the template's `[packages] tracked`.
+- `docs/example_app.md`: the one example app every template builds (notes + statistics over a placeholder database);
+  both templates' examples follow it. The `http` topic and the API server example are removed.
+
+---
+
 ## [0.9.0] - 2026-11-09
 
 ### Changed (breaking) — Controllers are Flutter-style UI state

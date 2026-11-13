@@ -47,7 +47,7 @@ Ignored paths (folders or files the linter does not see at all — not linted, n
   <skill>/.clean_arch_ignore     global, for every project
   <project>/.clean_arch_ignore   local, next to pubspec.yaml
   --ignore-paths <path> ...      for one run
-One path per line, relative to the project root (`lib/features/api_server/presentation/routes`),
+One path per line, relative to the project root (`lib/features/legacy`),
 globs allowed (`lib/features/*/presentation/dto`), `#` starts a comment.
 
 """
@@ -64,7 +64,7 @@ from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from typing import Sequence
 
-__version__ = "0.9.0"
+__version__ = "0.10.0"
 # ── Rule definitions ────────────────────────────────────────────────
 
 ALL_RULES = {
@@ -181,6 +181,19 @@ def _dart_files_under(root: str) -> list[Path]:
 # Numbers allowed without static const
 ALLOWED_NUMBERS = {-1, 0, 1, 2}
 
+# Folders of every feature and of lib/core: layer → subfolders (the template's [structure])
+LAYOUT: dict[str, tuple[str, ...]] = {
+    "data": ("data_sources", "models", "repositories"),
+    "domain": ("entities", "repositories", "use_cases"),
+    "presentation": ("pages", "widgets", "di", "controllers"),
+}
+
+# Presentation subfolders that may import use cases (the template's [lint.params] use_case_imports_in), e.g. blocs
+USE_CASE_IMPORTS_IN: set[str] = set()
+
+# Rules whose violations are warnings: shown, but `--strict` does not fail on them (the template's [lint] warn)
+WARN_RULES: set[str] = set()
+
 # Callback property names that must not receive inline closures
 CALLBACK_PROPERTIES = {
     "onPressed", "onChanged", "onSubmitted", "onTap", "onLongPress",
@@ -217,8 +230,12 @@ class Violation:
     message: str
     snippet: str = ""
 
+    @property
+    def is_warning(self) -> bool:
+        return self.rule in WARN_RULES
+
     def to_dict(self) -> dict:
-        return asdict(self)
+        return {**asdict(self), "severity": "warning" if self.is_warning else "error"}
 @dataclass
 class AnalysisResult:
     file: str
@@ -237,6 +254,11 @@ class AnalysisReport:
     @property
     def has_violations(self) -> bool:
         return self.total_violations > 0
+
+    @property
+    def has_errors(self) -> bool:
+        """Violations that are not warnings (what `--strict` fails on)."""
+        return any(not v.is_warning for r in self.results for v in r.violations)
 
     def to_dict(self) -> dict:
         return {
@@ -953,13 +975,22 @@ def check_import_violation(result: AnalysisResult) -> None:
                 snippet=_line_at(content, i),
             ))
 
-        # Check for usecase imports
-        if re.search(r'use_?cases?/', stripped):
+        # Check for usecase imports (allowed in the template's use_case_imports_in folders)
+        if re.search(r'use_?cases?/', stripped) and _presentation_folder(result.file) not in USE_CASE_IMPORTS_IN:
             result.violations.append(Violation(
                 file=result.file, line=i, rule="import_violation",
                 message=f"Presentation layer must not import use cases directly — use <feature>_getters.dart",
                 snippet=_line_at(content, i),
             ))
+def _presentation_folder(path: str) -> str:
+    """The subfolder of presentation/ that holds [path] (`blocs`, `pages`…), or ''."""
+    parts = Path(path).parts
+    if "presentation" not in parts:
+        return ""
+    index = len(parts) - 1 - parts[::-1].index("presentation")
+    return parts[index + 1] if index + 2 < len(parts) else ""
+
+
 def check_setstate_usage(result: AnalysisResult) -> None:
     """Check for setState() calls."""
     content = _read_file(Path(result.file))
@@ -1570,7 +1601,6 @@ def check_async_gap_context_mounted(result: AnalysisResult) -> None:
                 message="Navigator/ScaffoldMessenger call after await without mounted guard — add 'if (!context.mounted) return;' or 'if (!mounted) return;' before navigation",
                 snippet=_line_at(content, i),
             ))
-_DOMAIN_SUBFOLDERS = ("entities", "repositories", "use_cases")
 
 def _check_domain_file_location(result: AnalysisResult) -> None:
     """Enforce that domain-layer files live under a valid domain subfolder.
@@ -1582,7 +1612,7 @@ def _check_domain_file_location(result: AnalysisResult) -> None:
     """
     fp = result.file
     parts = fp.split("/")
-    if "domain" not in parts:
+    if "domain" not in parts or not LAYOUT.get("domain"):
         return
     try:
         domain_idx = parts.index("domain")
@@ -1594,25 +1624,18 @@ def _check_domain_file_location(result: AnalysisResult) -> None:
         result.violations.append(Violation(
             file=fp, line=0, rule="folder_naming",
             message=(f"Domain file '{rest[0]}' must live under "
-                     f"domain/entities/, domain/repositories/, or "
-                     f"domain/use_cases/ (not directly in domain/)"),
+                     f"{', '.join(f'domain/{sub}/' for sub in LAYOUT['domain'])} "
+                     f"(not directly in domain/)"),
          )),
 
 
 def check_folder_naming(result: AnalysisResult) -> None:
     """Check that feature AND core folder structures match conventions.
 
-    Both every feature under lib/features/<feature>/ and lib/core/ must contain:
-       - data/data_sources/ (NOT data_source/)
-       - data/models/
-       - data/repositories/
-       - domain/entities/
-       - domain/repositories/
-       - domain/use_cases/
-       - presentation/pages/
-       - presentation/widgets/
-       - presentation/di/
-       - presentation/controllers/ (optional, for stateful controllers)
+    Every feature under lib/features/<feature>/ and lib/core/ has, for every layer
+    folder present, exactly the subfolders of LAYOUT (the template's [structure];
+    by default data/data_sources|models|repositories, domain/entities|repositories|use_cases,
+    presentation/pages|widgets|di|controllers).
 
     core/ follows the same structure as features, so domain files such as
     result.dart belong in domain/entities/ (never directly in domain/).
@@ -1648,82 +1671,26 @@ def check_folder_naming(result: AnalysisResult) -> None:
     if feature_root in _folder_naming_reported:
         return
 
-    # Expected subfolders
-    expected_subfolders = {
-        "data_sources",
-        "models",
-        "repositories",
-    }
-    expected_domain_subfolders = {
-        "entities",
-        "repositories",
-        "use_cases",
-    }
-    expected_presentation_subfolders = {
-        "pages",
-        "widgets",
-        "di",
-        "controllers",
-    }
-
     # Scan the feature root for actual subfolders
     feature_path = Path(feature_root)
     if not feature_path.is_dir():
         return
 
-    # Check data/ subfolders
-    data_folder = feature_path / "data"
-    if data_folder.is_dir():
-        actual_data_sub = _subfolders(data_folder)
-        missing = expected_subfolders - actual_data_sub
-        extra = actual_data_sub - expected_subfolders
-
-        for sub in missing:
+    for layer, subfolders in LAYOUT.items():
+        expected = set(subfolders)
+        layer_folder = feature_path / layer
+        if not layer_folder.is_dir():
+            continue
+        actual = _subfolders(layer_folder)
+        for sub in sorted(expected - actual):
             result.violations.append(Violation(
                 file=fp, line=0, rule="folder_naming",
-                message=f"Feature '{feature_name}' data/ missing subfolder '{sub}/'",
+                message=f"Feature '{feature_name}' {layer}/ missing subfolder '{sub}/'",
             ))
-        for sub in extra:
-            # Check if it's a wrong name (e.g., data_source instead of data_sources)
+        for sub in sorted(actual - expected):
             result.violations.append(Violation(
                 file=fp, line=0, rule="folder_naming",
-                message=f"Feature '{feature_name}' data/ has unexpected subfolder '{sub}/' — expected one of {sorted(expected_subfolders)}",
-            ))
-
-    # Check domain/ subfolders
-    domain_folder = feature_path / "domain"
-    if domain_folder.is_dir():
-        actual_domain_sub = _subfolders(domain_folder)
-        missing = expected_domain_subfolders - actual_domain_sub
-        extra = actual_domain_sub - expected_domain_subfolders
-
-        for sub in missing:
-            result.violations.append(Violation(
-                file=fp, line=0, rule="folder_naming",
-                message=f"Feature '{feature_name}' domain/ missing subfolder '{sub}/'",
-            ))
-        for sub in extra:
-            result.violations.append(Violation(
-                file=fp, line=0, rule="folder_naming",
-                message=f"Feature '{feature_name}' domain/ has unexpected subfolder '{sub}/' — expected one of {sorted(expected_domain_subfolders)}",
-            ))
-
-    # Check presentation/ subfolders
-    presentation_folder = feature_path / "presentation"
-    if presentation_folder.is_dir():
-        actual_pres_sub = _subfolders(presentation_folder)
-        missing = expected_presentation_subfolders - actual_pres_sub
-        extra = actual_pres_sub - expected_presentation_subfolders
-
-        for sub in missing:
-            result.violations.append(Violation(
-                file=fp, line=0, rule="folder_naming",
-                message=f"Feature '{feature_name}' presentation/ missing subfolder '{sub}/'",
-            ))
-        for sub in extra:
-            result.violations.append(Violation(
-                file=fp, line=0, rule="folder_naming",
-                message=f"Feature '{feature_name}' presentation/ has unexpected subfolder '{sub}/' — expected one of {sorted(expected_presentation_subfolders)}",
+                message=f"Feature '{feature_name}' {layer}/ has unexpected subfolder '{sub}/' — expected one of {sorted(expected)}",
             ))
 
     # Mark this feature root as reported
@@ -2464,6 +2431,24 @@ def _collect_dart_files(path: str) -> list[Path]:
     if p.is_file():
         return [p] if p.suffix == ".dart" else []
     return sorted(p.rglob("*.dart"))
+def configure(template: object) -> None:
+    """Take the folders, warnings and parameters of a template (scripts/templates.py Template).
+
+    `[structure]` → LAYOUT; `[lint] warn` → WARN_RULES; `[lint.params]`: `allowed_numbers`,
+    `theme_file`, `layout_name_words`, `use_case_imports_in`.
+    """
+    global LAYOUT, WARN_RULES, ALLOWED_NUMBERS, CORE_THEME_FILE, LAYOUT_NAME_WORDS, USE_CASE_IMPORTS_IN
+    data = template.data  # type: ignore[attr-defined]
+    lint = data.get("lint", {})
+    params = lint.get("params", {})
+    LAYOUT = template.layout  # type: ignore[attr-defined]
+    WARN_RULES = set(lint.get("warn", ()))
+    ALLOWED_NUMBERS = set(params.get("allowed_numbers", ALLOWED_NUMBERS))
+    CORE_THEME_FILE = str(params.get("theme_file", CORE_THEME_FILE))
+    LAYOUT_NAME_WORDS = tuple(params.get("layout_name_words", LAYOUT_NAME_WORDS))
+    USE_CASE_IMPORTS_IN = set(params.get("use_case_imports_in", ()))
+
+
 def analyze(path: str, rules: set[str], json_output: bool = False, ignore_files: list[str] | None = None,
             ignore_paths: list[str] | None = None) -> AnalysisReport:
     """Analyze Dart files and return a report."""
@@ -2531,7 +2516,8 @@ def _print_text_report(report: AnalysisReport) -> None:
         print(f"  {result.file}")
         for v in result.violations:
             line_info = f"line {v.line}: " if v.line > 0 else ""
-            print(f"    [{v.rule}] {line_info}{v.message}")
+            level = " (warning)" if v.is_warning else ""
+            print(f"    [{v.rule}]{level} {line_info}{v.message}")
             if v.snippet:
                 print(f"      -> {v.snippet[:100]}")
         print()
@@ -2596,7 +2582,7 @@ Examples:
     python scripts/dart_clean_arch_linter.py lib/features/song --json
     python scripts/dart_clean_arch_linter.py lib/features/song --strict
     python scripts/dart_clean_arch_linter.py lib/features/auth --ignore-files firebase_options.dart
-    python scripts/dart_clean_arch_linter.py --ignore-paths lib/features/api_server/presentation/routes
+    python scripts/dart_clean_arch_linter.py --ignore-paths lib/features/legacy
          """,
     )
     parser.add_argument("path", nargs="?", default="lib", help="Path to Dart files or directory (default: whole project lib)")
@@ -2606,11 +2592,25 @@ Examples:
     parser.add_argument("--ignore", nargs="*", help="Rules to ignore (comma-separated per arg)")
     parser.add_argument("--ignore-files", nargs="*", help="File patterns to skip entirely (glob or substring)")
     parser.add_argument("--ignore-paths", nargs="*", help="Project folders/files to skip entirely, relative to the project root (globs allowed); added to .clean_arch_ignore")
+    parser.add_argument("--template", help="Template (name@version) whose `lint.off` applies; default: the project's .clean_arch.toml, else the skill's default")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
 
     args = parser.parse_args()
 
     rules = _parse_rules(args.rules)
+
+    # The template: its folders, warnings and parameters; the rules it turns off (only when all rules run)
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import templates  # noqa: PLC0415
+
+    try:
+        template = templates.resolve(args.template, Path(args.path))
+    except templates.TemplateError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(2)
+    configure(template)
+    if args.rules == "all":
+        rules -= set(template.lint_off)
 
     # Remove ignored rules
     for ignore_arg in (args.ignore or []):
@@ -2627,7 +2627,7 @@ Examples:
 
     report = analyze(path, rules, args.json, args.ignore_files, args.ignore_paths)
 
-    if args.strict and report.has_violations:
+    if args.strict and report.has_errors:
         sys.exit(1)
 
     sys.exit(0)

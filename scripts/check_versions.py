@@ -2,7 +2,7 @@
 """
 Compare the package versions pinned by this skill with the latest ones on pub.dev.
 
-The single source of pinned versions is assets/example_app/pubspec.yaml.
+The source of pinned versions is the template's example/pubspec.yaml (default template, or --template).
 `--update` rewrites the outdated constraints there and in every reference that
 shows a pubspec snippet, so docs and the example stay in sync.
 
@@ -22,11 +22,15 @@ import urllib.request
 from pathlib import Path
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent
-PUBSPEC = SKILL_ROOT / "assets" / "example_app" / "pubspec.yaml"
-DOC_FILES = [SKILL_ROOT / "SKILL.md", *sorted((SKILL_ROOT / "references").glob("*.md"))]
+sys.path.insert(0, str(SKILL_ROOT / "scripts"))
+import templates  # noqa: E402
 
-# Packages whose versions the skill prescribes
-TRACKED = ("get_it", "watch_it", "logger", "relic", "uuid", "flutter_lints")
+# Set by main() from the template checked (its example pubspec and rules)
+PUBSPEC = templates.resolve().example_dir / "pubspec.yaml"
+DOC_FILES: list[Path] = templates.resolve().doc_files()
+
+# Packages whose versions are checked; a template's [packages] tracked replaces them
+TRACKED = ("get_it", "watch_it", "logger", "uuid", "flutter_lints")
 
 PUB_API = "https://pub.dev/api/packages/{name}"
 CONSTRAINT = r"(^\s*{name}:\s*\^)(\d+\.\d+\.\d+)"
@@ -75,7 +79,15 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--strict", action="store_true", help="exit 1 when a package is outdated")
     parser.add_argument("--update", action="store_true", help="bump outdated constraints in the pubspec and docs")
+    parser.add_argument("--template", help="template (name@version) to check; default: the skill's default")
     args = parser.parse_args()
+
+    global PUBSPEC, DOC_FILES, TRACKED
+    template = templates.resolve(args.template)
+    PUBSPEC = template.example_dir / "pubspec.yaml"
+    DOC_FILES = template.doc_files()
+    TRACKED = tuple(template.data.get("packages", {}).get("tracked", TRACKED))
+    print(f"Template {template.ref}")
 
     pinned = pinned_versions()
     outdated: dict[str, str] = {}

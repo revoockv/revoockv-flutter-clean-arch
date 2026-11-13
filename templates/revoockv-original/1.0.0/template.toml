@@ -1,0 +1,103 @@
+# revoockv-original 1.0.0 — the architecture the skill had up to 0.9.0.
+# The agent reads this file first, then only the rule files the task needs.
+
+name = "revoockv-original"
+version = "1.0.0"
+description = "Clean architecture on GetIt + watch_it: ValueNotifier inside, ValueListenable outside, use cases for everything"
+author = "revoockv"
+
+[choices]
+# Short answers to "how is it done here?"; the rule files say the details.
+layers = ["data", "domain", "presentation"]
+core = "lib/core mirrors the feature layers: shared Result, ResultState, DisposableResource, the app database, theme, core DI, the home shell"
+app_state = "repositories: a private ValueNotifier, exposed only as ValueListenable"
+state_manager = "watch_it (watch, registerHandler, createOnce) over ValueNotifier"
+use_case_returns = ["Future<Result<T>> for actions", "ValueListenable<T> for live state (watch… use cases)"]
+streams = "only inside data sources; repositories turn them into ValueNotifier"
+di = "GetIt through watch_it's di: registerAndInit<Feature>() per feature, use case getters in <feature>_getters.dart"
+ui_state = "controllers like TextEditingController: UI state only, never call use cases; owner WatchingWidget calls them"
+set_state = false
+errors = "own sealed Result<T> (Result.ok, success, failure) and ResultState<T>; exceptions only in the logger"
+models = "DTO models in data/models with manual JSON and mapping to domain entities"
+ids = "UUID v4 created in the data source"
+tests = "every layer; a test DI per feature with fake data sources"
+git = "develop + <type>/<NNN>-<name> branches, [TYPE-NNN] commits, --no-ff merges, branches kept"
+
+[rules]
+# Topic → files (relative to this folder). Read only the topics of the task.
+workflow = ["rules/workflow.md"]
+decisions = ["rules/decisions.md"]
+structure = ["rules/structure/folder_structure.md"]
+state = [
+  "rules/state/reactive_state_syntax.md",
+  "rules/state/reactive_state_patterns.md",
+  "rules/state/controllers.md",
+  "rules/state/result_state.md",
+  "rules/state/widget_rules.md",
+]
+di = ["rules/di/di_patterns.md", "rules/di/di_conventions.md"]
+use_cases = ["rules/use_cases/use_case_naming.md"]
+errors_models = ["rules/errors_models/result.md", "rules/errors_models/models_mapping.md"]
+style = [
+  "rules/style/dart_style.md",
+  "rules/style/constants.md",
+  "rules/style/imports.md",
+  "rules/style/dartdoc_standard.md",
+  "rules/style/logging_conventions.md",
+]
+testing = ["rules/testing/testing.md"]
+git = ["rules/git/git_rules.md"]
+packages = ["rules/packages/packages.md"]
+example_feature = [
+  "rules/examples/auth_domain.md",
+  "rules/examples/auth_data.md",
+  "rules/examples/auth_presentation.md",
+]
+
+[structure]
+# Folders of every feature (and of lib/core); init_feature creates them.
+data = ["data_sources", "models", "repositories"]
+domain = ["entities", "repositories", "use_cases"]
+presentation = ["pages", "widgets", "di", "controllers"]
+
+[scaffold]
+# Stub files live in scaffold/{app,feature,subfeature}/ ({{feature}}, {{Feature}} … filled in).
+next_step = "call registerAndInit{{Feature}}() from registerAndInit() in lib/di.dart"
+# Files `init_feature --core` copies from the example.
+core_files = [
+  "core/domain/entities/result.dart",
+  "core/domain/entities/disposable_resource.dart",
+  "core/domain/entities/result_state.dart",
+  "core/presentation/di/core_di.dart",
+  "core/presentation/theme.dart",
+]
+
+[example]
+# The project built with every rule of this template; selfcheck verifies it.
+path = "example"
+package = "example_app"
+# Docs import `package:<docs_package>/…`; selfcheck compiles their code inside the example.
+docs_package = "your_app"
+# Doc code blocks under these paths are compiled; those under `same_as_example` must equal the example's files.
+doc_paths = ["lib/core/", "lib/features/auth/"]
+same_as_example = ["lib/core/"]
+# The doc-only feature compiled in the example and linted on its own.
+doc_feature = "lib/features/auth"
+
+[packages]
+# Packages check_versions.py compares with pub.dev.
+tracked = ["get_it", "watch_it", "logger", "uuid", "flutter_lints"]
+
+[lint]
+# Rules this template turns off (none: all 30 apply).
+off = []
+# Rules reported as warnings: shown, but `--strict` does not fail on them.
+warn = []
+
+[lint.params]
+# Numbers allowed outside `static const`.
+allowed_numbers = [-1, 0, 1, 2]
+# Shared values (spacing, sizes, colors) of every feature, relative to lib/.
+theme_file = "core/presentation/theme.dart"
+# Words of a private constant that make it a spacing value AppTheme may already have.
+layout_name_words = ["padding", "spacing", "gap", "margin", "inset"]

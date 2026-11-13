@@ -16,7 +16,10 @@ import unittest
 from pathlib import Path
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent
-EXAMPLE_LIB = SKILL_ROOT / "assets" / "example_app" / "lib"
+sys.path.insert(0, str(SKILL_ROOT / "scripts"))
+import templates  # noqa: E402
+
+EXAMPLE_LIB = templates.resolve().example_dir / "lib"
 
 _spec = importlib.util.spec_from_file_location("linter", SKILL_ROOT / "scripts" / "dart_clean_arch_linter.py")
 linter = importlib.util.module_from_spec(_spec)
@@ -833,6 +836,74 @@ class ControllerNoActionsTest(unittest.TestCase):
             }
         """
         self.assertEqual(run({CONTROLLERS + "tab_controller.dart": code}, self.RULES), [])
+
+
+class TemplateConfigTest(unittest.TestCase):
+    """The linter takes folders, warnings and parameters from a template."""
+
+    def setUp(self):
+        self.saved = (linter.LAYOUT, linter.WARN_RULES, linter.ALLOWED_NUMBERS, linter.CORE_THEME_FILE,
+                      linter.LAYOUT_NAME_WORDS)
+
+    def tearDown(self):
+        (linter.LAYOUT, linter.WARN_RULES, linter.ALLOWED_NUMBERS, linter.CORE_THEME_FILE,
+         linter.LAYOUT_NAME_WORDS) = self.saved
+
+    def _configure(self, **lint):
+        base = templates.resolve()
+        data = {**base.data, "structure": lint.pop("structure", base.data["structure"]), "lint": lint}
+        linter.configure(templates.Template(base.name, base.version, base.folder, data))
+
+    def test_folders_follow_the_template_structure(self):
+        self._configure(structure={"domain": ["entities", "use_cases"], "ui": ["screens"]})
+        found = run({
+            "features/notes/domain/entities/note.dart": "final class Note {}\n",
+            "features/notes/domain/repositories/notes_repository.dart": "abstract class NotesRepository {}\n",
+            "features/notes/ui/screens/notes_screen.dart": "final class NotesScreen {}\n",
+        }, {"folder_naming"})
+        self.assertEqual({rule for _, rule, _ in found}, {"folder_naming"})
+        found_ok = run({
+            "features/notes/domain/entities/note.dart": "final class Note {}\n",
+            "features/notes/domain/use_cases/add_note_use_case.dart": "final class AddNoteUseCase {}\n",
+            "features/notes/ui/screens/notes_screen.dart": "final class NotesScreen {}\n",
+        }, {"folder_naming"})
+        self.assertEqual(found_ok, [])
+
+    def test_allowed_numbers_come_from_params(self):
+        code = """
+            final class Box {
+              int size() => 8;
+            }
+        """
+        self.assertTrue(run({"features/notes/domain/entities/box.dart": code}, {"magic_numbers"}))
+        self._configure(params={"allowed_numbers": [0, 1, 8]})
+        self.assertEqual(run({"features/notes/domain/entities/box.dart": code}, {"magic_numbers"}), [])
+
+    def test_warn_rules_do_not_fail_strict(self):
+        self._configure(warn=["magic_numbers"])
+        code = "final class Box {\n  int size() => 8;\n}\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "lib" / "features/notes/domain/entities/box.dart"
+            path.parent.mkdir(parents=True)
+            path.write_text(code, encoding="utf-8")
+            with contextlib.redirect_stdout(io.StringIO()):
+                report = linter.analyze(str(Path(tmp) / "lib"), {"magic_numbers"}, json_output=True)
+        self.assertTrue(report.has_violations)
+        self.assertFalse(report.has_errors)
+        self.assertEqual(report.to_dict()["results"][0]["violations"][0]["severity"], "warning")
+
+
+class UseCaseImportsTest(unittest.TestCase):
+    def tearDown(self):
+        linter.USE_CASE_IMPORTS_IN = set()
+
+    def test_use_case_imports_allowed_only_in_listed_folders(self):
+        code = "import '../../domain/use_cases/add_note_use_case.dart';\n\nfinal class NotesBloc {}\n"
+        files = {"features/notes/presentation/blocs/notes_bloc.dart": code}
+        self.assertTrue(run(files, {"import_violation"}))
+        linter.USE_CASE_IMPORTS_IN = {"blocs"}
+        self.assertEqual(run(files, {"import_violation"}), [])
+        self.assertTrue(run({"features/notes/presentation/widgets/list_widget.dart": code}, {"import_violation"}))
 
 
 class ExampleAppTest(unittest.TestCase):
