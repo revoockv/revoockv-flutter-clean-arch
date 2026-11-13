@@ -2,7 +2,7 @@
 name: revoockv-flutter-clean-arch
 description: Build Flutter apps by a chosen clean-architecture template (default revoockv-original - GetIt + watch_it, ValueNotifier-based state; revoockv-bloc - flutter_bloc with dependencies in the widget tree) and manage those templates. Use when the user asks to create a new feature or project, refactor an existing project/feature, migrate from Riverpod/Bloc/streams, add DI modules, data models (DTO) with mapping to entities, build minimal-rebuild UI, check code against the architecture (linter), or to create, change, version, choose or validate an architecture template (folders, state manager, DI, use cases, code style, tests, git rules).
 metadata:
-  version: 0.9.0
+  version: 0.10.0
   author: revoockv
 ---
 
