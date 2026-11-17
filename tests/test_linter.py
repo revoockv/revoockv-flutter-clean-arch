@@ -956,6 +956,20 @@ class WatchSelectTest(unittest.TestCase):
         """
         self.assertEqual(run({WIDGETS + "button_widget.dart": code}, self.RULES), [])
 
+    def test_filtered_items_are_valid(self):
+        code = """
+            final class ListWidget extends WatchingWidget {
+              @override
+              Widget build(BuildContext context) {
+                final List<Note> notes = watch(
+                  watchNotesUseCase(),
+                ).value.where((Note note) => note.isDone).toList();
+                return Text('$notes');
+              }
+            }
+        """
+        self.assertEqual(run({WIDGETS + "list_widget.dart": code}, self.RULES), [])
+
     def test_watch_property_value_alone_makes_a_watching_widget(self):
         code = """
             final class ButtonWidget extends WatchingWidget {

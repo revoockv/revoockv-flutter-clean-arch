@@ -2404,6 +2404,24 @@ def check_controller_no_actions(result: AnalysisResult) -> None:
 # `watch(…).value` followed by a member, an index or `?.`: the widget uses a part of the value.
 _WATCH_START = re.compile(r'(?<![\w.])watch\s*\(')
 _SELECTED_AFTER_VALUE = re.compile(r'\s*\.\s*value\s*(?:\.\s*\w|\[|\?\.)')
+# A chain that ends in a new collection (`.where(…).toList()`): the widget needs the items, not a part.
+_ENDS_IN_COLLECTION = re.compile(r'\.\s*to(?:List|Set)\s*\([^()]*\)\s*$')
+
+
+def _rest_of_statement(code: str, start: int) -> str:
+    """[code] from [start] to the `;` that ends the statement (outside brackets)."""
+    depth = 0
+    for i in range(start, len(code)):
+        char = code[i]
+        if char in "([{":
+            depth += 1
+        elif char in ")]}":
+            if depth == 0:
+                return code[start:i]
+            depth -= 1
+        elif char in ";," and depth == 0:
+            return code[start:i]
+    return code[start:]
 
 
 def check_watch_select(result: AnalysisResult) -> None:
@@ -2411,6 +2429,7 @@ def check_watch_select(result: AnalysisResult) -> None:
 
     `watch(listenable).value.isLoading` (or `.text`, `.length`, `.where(…)`) rebuilds on every change of the whole
     value; `watchPropertyValue((L l) => l.value.isLoading, target: listenable)` rebuilds only when the part changes.
+    A chain that ends in `.toList()` / `.toSet()` builds the items the widget shows — it needs every change.
     """
     if not _is_presentation_file(result.file) or _is_in_di_folder(result.file):
         return
@@ -2422,6 +2441,8 @@ def check_watch_select(result: AnalysisResult) -> None:
             depth += {"(": 1, ")": -1}.get(code[end], 0)
             end += 1
         if depth or not _SELECTED_AFTER_VALUE.match(code, end):
+            continue
+        if _ENDS_IN_COLLECTION.search(_rest_of_statement(code, end)):
             continue
         i = code.count("\n", 0, m.start()) + 1
         result.violations.append(Violation(
