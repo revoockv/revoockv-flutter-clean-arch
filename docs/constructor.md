@@ -49,8 +49,8 @@ file of its topic. A subject the new template does the same way as its source st
 | `[structure]` | Layer → folders of every feature and of `lib/core`: `init_feature` creates them, the linter's `folder_naming` checks them |
 | `[scaffold]` | `core_files` that `init_feature --core` copies from the example; `next_step` printed after `--feature`. Stub files are in the version folder's `scaffold/app/` (under `lib/` with `--core`), `scaffold/feature/` and `scaffold/subfeature/` (under the feature) as `*.tmpl`, with `{{feature}}`, `{{Feature}}`, `{{subfeature}}`, `{{Subfeature}}`, `{{package}}` filled in |
 | `[example]` | `path`, `package`; `docs_package` (package name in the rules' imports); `doc_paths` (code blocks of the rules compiled in the example), `same_as_example` (blocks that must equal the example's files), `doc_feature` (a feature that lives only in the rules) |
-| `[lint]` | `off` — rules the template does not use; `warn` — rules shown as warnings (`--strict` does not fail on them) |
-| `[lint.params]` | `allowed_numbers`, `theme_file` (relative to `lib/`), `layout_name_words`, `use_case_imports_in` (presentation folders that may import use cases) |
+| `[lint]` | `off` — rules the template does not use; `warn` — rules shown as warnings (`--strict` does not fail on them); `on` — opt-in rules it turns on (`watch_select`, `ui_kit_pure`; off unless listed) |
+| `[lint.params]` | `allowed_numbers`, `theme_file` (relative to `lib/`), `layout_name_words`, `use_case_imports_in` (presentation folders that may import use cases), `ui_kit_dirs` (folders under `lib/` of the pure UI widgets that `ui_kit_pure` checks) |
 | `[packages]` | `tracked` — packages `check_versions.py` compares with pub.dev |
 
 ## 4. Make a template

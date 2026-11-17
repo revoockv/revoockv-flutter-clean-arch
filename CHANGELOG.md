@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased]
+
+### Added
+- Opt-in lint rules, turned on by a template's `[lint] on` (templates made before them keep passing):
+  - `watch_select` — `watch(x).value.part` rebuilds on every change of the whole value; use
+    `watchPropertyValue(_partOf, target: x)`.
+  - `ui_kit_pure` — widgets of `[lint.params] ui_kit_dirs` import only Flutter, the kit and the theme, and are never
+    Watching widgets.
+- `watchPropertyValue()` counts as a watch_it call for `watching_widget` and `watch_order`.
+- `templates.py validate` checks `[lint] on` and the `ui_kit_dirs` parameter.
+- revoockv-original@2.0.0 uses both (template changelog).
+
 ## [0.10.0] - 2026-11-13
 
 ### Changed (breaking) — templates

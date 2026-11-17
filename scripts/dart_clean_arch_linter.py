@@ -36,6 +36,8 @@ Rules (all enabled by default):
     watch_order        — watch()/registerHandler() only at the top level of build(), never inside if/for/switch/callbacks
     controller_naming  — every controller (ValueNotifier, *Controller) is named '<noun>Controller', a FocusNode '<noun>FocusNode'
     controller_no_actions — controllers hold UI state only: no functions returning Future<Result> (the owner widget calls use cases)
+    watch_select       — (opt-in) watch(x).value.part → watchPropertyValue((L l) => l.value.part, target: x)
+    ui_kit_pure        — (opt-in) widgets of [lint.params] ui_kit_dirs import only Flutter, the kit and the theme
     static_const_in_state_class — static const of a stateful widget live in its State class
     magic_numbers_in_layout — numbers in EdgeInsets/Size/Offset/Color must be static const
     theme_import       — values shared by features live in lib/core/presentation/theme.dart (AppTheme)
@@ -98,7 +100,16 @@ ALL_RULES = {
     "watch_order",
     "controller_naming",
     "controller_no_actions",
+    "watch_select",
+    "ui_kit_pure",
 }
+
+# Rules a template turns on itself (`[lint] on`): with all rules they run only when listed there, so the templates
+# made before them keep passing.
+OPT_IN_RULES = {"watch_select", "ui_kit_pure"}
+
+# Folders (relative to lib/) of the pure UI widgets (the template's [lint.params] ui_kit_dirs)
+UI_KIT_DIRS: tuple[str, ...] = ()
 
 # Files ignored by default (generated/config files that should not be linted)
 # Ignored paths: global file in the skill, local file in the project root
@@ -210,7 +221,7 @@ PRESENTATION_PATH_PATTERNS = [r"presentation/"]
 #   watch(watch<Name>UseCase()) / watch(controller)           — show state
 #   registerHandler(target: ..., handler: _onX)               — react to state (side effects)
 #   createOnce(_createController, dispose: _disposeController) — own a controller
-WATCH_IT_ORDERED_CALL = r'(?<![\w.])(?:watch|registerHandler|createOnce)\s*\('
+WATCH_IT_ORDERED_CALL = r'(?<![\w.])(?:watch|watchPropertyValue|registerHandler|createOnce)\s*[<(]'
 
 # Patterns that indicate domain layer files
 DOMAIN_PATH_PATTERNS = [r"domain/"]
@@ -2390,6 +2401,82 @@ def check_controller_no_actions(result: AnalysisResult) -> None:
                 snippet=_line_at(content, i),
             ))
 
+# `watch(…).value` followed by a member, an index or `?.`: the widget uses a part of the value.
+_WATCH_START = re.compile(r'(?<![\w.])watch\s*\(')
+_SELECTED_AFTER_VALUE = re.compile(r'\s*\.\s*value\s*(?:\.\s*\w|\[|\?\.)')
+
+
+def check_watch_select(result: AnalysisResult) -> None:
+    """Check that a widget that uses a part of a watched value selects it with watchPropertyValue().
+
+    `watch(listenable).value.isLoading` (or `.text`, `.length`, `.where(…)`) rebuilds on every change of the whole
+    value; `watchPropertyValue((L l) => l.value.isLoading, target: listenable)` rebuilds only when the part changes.
+    """
+    if not _is_presentation_file(result.file) or _is_in_di_folder(result.file):
+        return
+    content = _read_file(Path(result.file))
+    code, _ = _scan_dart(content)
+    for m in _WATCH_START.finditer(code):
+        depth, end = 1, m.end()
+        while end < len(code) and depth:
+            depth += {"(": 1, ")": -1}.get(code[end], 0)
+            end += 1
+        if depth or not _SELECTED_AFTER_VALUE.match(code, end):
+            continue
+        i = code.count("\n", 0, m.start()) + 1
+        result.violations.append(Violation(
+            file=result.file, line=i, rule="watch_select",
+            message="watch() rebuilds on every change of the whole value — select the part you use: "
+                    "watchPropertyValue((L l) => l.value.part, target: listenable)",
+            snippet=_line_at(content, i),
+        ))
+
+
+# Imports a pure UI widget must not have: app state, DI, features, translations, other layers.
+_UI_KIT_FORBIDDEN = re.compile(
+    r"package:(?:watch_it|get_it|flutter_bloc|bloc|provider|riverpod|flutter_riverpod)/"
+    r"|['/](?:features|domain|data|di|l10n|controllers|pages)/|_getters\.dart"
+)
+
+
+def _ui_kit_dir_of(file_path: str) -> str | None:
+    """The folder of ui_kit_dirs (relative to lib/) that holds [file_path], or None."""
+    lib_root = _lib_root(file_path)
+    if lib_root is None:
+        return None
+    rel = Path(file_path).relative_to(lib_root).as_posix()
+    return next((d for d in UI_KIT_DIRS if rel.startswith(d + "/")), None)
+
+
+def check_ui_kit_pure(result: AnalysisResult) -> None:
+    """Check that the widgets of the template's ui_kit_dirs are pure UI, ready to copy into another project.
+
+    They import only Flutter, other widgets of the kit and the theme file: no state manager, DI, getters, features,
+    domain entities, translations, controllers or pages; and no Watching widgets.
+    """
+    if _ui_kit_dir_of(result.file) is None:
+        return
+    content = _read_file(Path(result.file))
+    for i, line in enumerate(content.splitlines(), 1):
+        stripped = line.strip()
+        if stripped.startswith(("import ", "export ")) and _UI_KIT_FORBIDDEN.search(stripped):
+            result.violations.append(Violation(
+                file=result.file, line=i, rule="ui_kit_pure",
+                message="A UI-kit widget imports only Flutter, the kit and the theme — take plain values "
+                        "(String, num, bool, Duration, Color, IconData) and callbacks instead",
+                snippet=_line_at(content, i),
+            ))
+    code, _ = _scan_dart(content)
+    for name, base, _, offset, _ in _widget_classes(code):
+        if base in ("WatchingWidget", "WatchingStatefulWidget"):
+            i = code.count("\n", 0, offset) + 1
+            result.violations.append(Violation(
+                file=result.file, line=i, rule="ui_kit_pure",
+                message=f"{name}: a UI-kit widget watches nothing — make it a StatelessWidget that takes the value; "
+                        "the feature widget that uses it watches",
+                snippet=_line_at(content, i),
+            ))
+
 
 # ── Main ────────────────────────────────────────────────────────────
 
@@ -2424,6 +2511,8 @@ CHECKERS = {
     "watch_order": check_watch_order,
     "controller_naming": check_controller_naming,
     "controller_no_actions": check_controller_no_actions,
+    "watch_select": check_watch_select,
+    "ui_kit_pure": check_ui_kit_pure,
 }
 def _collect_dart_files(path: str) -> list[Path]:
     """Collect all .dart files under the given path."""
@@ -2435,9 +2524,9 @@ def configure(template: object) -> None:
     """Take the folders, warnings and parameters of a template (scripts/templates.py Template).
 
     `[structure]` → LAYOUT; `[lint] warn` → WARN_RULES; `[lint.params]`: `allowed_numbers`,
-    `theme_file`, `layout_name_words`, `use_case_imports_in`.
+    `theme_file`, `layout_name_words`, `use_case_imports_in`, `ui_kit_dirs`.
     """
-    global LAYOUT, WARN_RULES, ALLOWED_NUMBERS, CORE_THEME_FILE, LAYOUT_NAME_WORDS, USE_CASE_IMPORTS_IN
+    global LAYOUT, WARN_RULES, ALLOWED_NUMBERS, CORE_THEME_FILE, LAYOUT_NAME_WORDS, USE_CASE_IMPORTS_IN, UI_KIT_DIRS
     data = template.data  # type: ignore[attr-defined]
     lint = data.get("lint", {})
     params = lint.get("params", {})
@@ -2447,6 +2536,7 @@ def configure(template: object) -> None:
     CORE_THEME_FILE = str(params.get("theme_file", CORE_THEME_FILE))
     LAYOUT_NAME_WORDS = tuple(params.get("layout_name_words", LAYOUT_NAME_WORDS))
     USE_CASE_IMPORTS_IN = set(params.get("use_case_imports_in", ()))
+    UI_KIT_DIRS = tuple(str(d).strip("/") for d in params.get("ui_kit_dirs", ()))
 
 
 def analyze(path: str, rules: set[str], json_output: bool = False, ignore_files: list[str] | None = None,
@@ -2611,6 +2701,7 @@ Examples:
     configure(template)
     if args.rules == "all":
         rules -= set(template.lint_off)
+        rules -= OPT_IN_RULES - set(template.lint_on)
 
     # Remove ignored rules
     for ignore_arg in (args.ignore or []):
