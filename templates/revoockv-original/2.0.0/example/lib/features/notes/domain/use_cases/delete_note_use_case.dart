@@ -1,0 +1,14 @@
+import 'package:example_app/core/domain/entities/result.dart';
+import '../repositories/notes_repository.dart';
+import '../entities/note_failure.dart';
+
+/// Action use case: deletes a note.
+final class DeleteNoteUseCase {
+  final NotesRepository _repository;
+
+  /// Creates the use case.
+  DeleteNoteUseCase(this._repository);
+
+  /// Deletes the note with [id].
+  Future<Result<void, NoteFailure>> call(String id) => _repository.deleteNote(id);
+}
