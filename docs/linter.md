@@ -1,6 +1,6 @@
 # Architecture linter
 
-The linter follows the project's template (`.clean_arch.toml`, else the default; `--template REF` for one run): `folder_naming` checks its `[structure]`, the rules of `[lint] off` do not run, the opt-in rules run only when `[lint] on` lists them, those of `[lint] warn` are shown as warnings that `--strict` does not fail on, and `[lint.params]` sets the allowed numbers, the theme file, the spacing words the presentation folders that may import use cases and the UI-kit folders (`ui_kit_dirs`).
+The linter follows the project's template (`.clean_arch.toml`, else the default; `--template REF` for one run): `folder_naming` checks its `[structure]`, the rules of `[lint] off` do not run, the opt-in rules run only when `[lint] on` lists them, those of `[lint] warn` are shown as warnings that `--strict` does not fail on, and `[lint.params]` sets the allowed numbers, the theme file, the spacing words the presentation folders that may import use cases and the folders of the widgets shared by features (`core_widget_dirs`).
 
 The linter script lives in the skill's `scripts/` folder. Never copy the script into the project.
 
@@ -45,6 +45,6 @@ lib/features/*/presentation/dto
 
 Add a path only when the user asks for it or when a reference says so — never to silence a violation.
 
-**32 rules** (`watch_select` and `ui_kit_pure` opt-in, through `[lint] on`): `naming_file`, `naming_class`, `magic_numbers`, `magic_strings`, `magic_colors`, `widget_helpers`, `inline_callbacks`, `import_violation`, `setstate_usage`, `stateful_no_lifecycle`, `dartdoc_public`, `no_state_in_di`, `widget_stateless`, `watching_widget`, `no_controller_in_ui`, `static_const_order`, `no_build_return`, `folder_naming`, `async_gap_context_mounted`, `widget_key_parameter`, `controller_lifecycle`, `widget_methods`, `stateless_with_controllers`, `static_const_in_state_class`, `magic_numbers_in_layout`, `theme_import`, `value_listenable_exposure`, `watch_order`, `controller_naming`, `controller_no_actions`, `watch_select`, `ui_kit_pure`.
+**32 rules** (`watch_select` and `core_widgets_pure` opt-in, through `[lint] on`): `naming_file`, `naming_class`, `magic_numbers`, `magic_strings`, `magic_colors`, `widget_helpers`, `inline_callbacks`, `import_violation`, `setstate_usage`, `stateful_no_lifecycle`, `dartdoc_public`, `no_state_in_di`, `widget_stateless`, `watching_widget`, `no_controller_in_ui`, `static_const_order`, `no_build_return`, `folder_naming`, `async_gap_context_mounted`, `widget_key_parameter`, `controller_lifecycle`, `widget_methods`, `stateless_with_controllers`, `static_const_in_state_class`, `magic_numbers_in_layout`, `theme_import`, `value_listenable_exposure`, `watch_order`, `controller_naming`, `controller_no_actions`, `watch_select`, `core_widgets_pure`.
 
 All rules the template does not turn off run. Only disable a rule with `--ignore` when the user explicitly requests it; to drop it for good, put it in the template's `[lint] off` (a new template version).

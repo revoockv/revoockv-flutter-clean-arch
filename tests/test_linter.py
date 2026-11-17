@@ -984,16 +984,16 @@ class WatchSelectTest(unittest.TestCase):
                          [("button_widget.dart", "watch_order", 6)])
 
 
-class UiKitPureTest(unittest.TestCase):
-    RULES = {"ui_kit_pure"}
-    KIT = "core/presentation/widgets/"
+class CoreWidgetsPureTest(unittest.TestCase):
+    RULES = {"core_widgets_pure"}
+    CORE = "core/presentation/widgets/"
 
     def setUp(self):
-        self._dirs = linter.UI_KIT_DIRS
-        linter.UI_KIT_DIRS = ("core/presentation/widgets",)
+        self._dirs = linter.CORE_WIDGET_DIRS
+        linter.CORE_WIDGET_DIRS = ("core/presentation/widgets",)
 
     def tearDown(self):
-        linter.UI_KIT_DIRS = self._dirs
+        linter.CORE_WIDGET_DIRS = self._dirs
 
     def test_flutter_kit_and_theme_imports_are_valid(self):
         code = """
@@ -1007,7 +1007,7 @@ class UiKitPureTest(unittest.TestCase):
               Widget build(BuildContext context) => const SizedBox();
             }
         """
-        self.assertEqual(run({self.KIT + "progress_button_widget.dart": code}, self.RULES), [])
+        self.assertEqual(run({self.CORE + "progress_button_widget.dart": code}, self.RULES), [])
 
     def test_state_features_and_watching_widgets_are_violations(self):
         code = """
@@ -1022,7 +1022,7 @@ class UiKitPureTest(unittest.TestCase):
               Widget build(BuildContext context) => const SizedBox();
             }
         """
-        lines = [line for _, _, line in run({self.KIT + "note_button_widget.dart": code}, self.RULES)]
+        lines = [line for _, _, line in run({self.CORE + "note_button_widget.dart": code}, self.RULES)]
         self.assertEqual(lines, [3, 4, 5, 6, 8])
 
     def test_widgets_outside_the_kit_are_not_checked(self):
