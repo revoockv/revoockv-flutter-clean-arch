@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [Unreleased]
+## [0.11.0] - 2026-11-23
 
 ### Changed
 - README is short: what the skill is for, install, use, templates, scripts. What a template enforces and the
