@@ -9,6 +9,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- A pushed tag `vX.Y.Z` makes GitHub Actions run the tests and create the GitHub release, with the
+  `## [X.Y.Z]` section of this file as its notes (`.github/workflows/release.yml`).
 - Opt-in lint rules, turned on by a template's `[lint] on` (templates made before them keep passing):
   - `watch_select` — `watch(x).value.part` rebuilds on every change of the whole value; use
     `watchPropertyValue(_partOf, target: x)`.
