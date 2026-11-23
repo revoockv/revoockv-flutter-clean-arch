@@ -1046,5 +1046,28 @@ class CoreWidgetsPureTest(unittest.TestCase):
         self.assertEqual(run({WIDGETS + "list_widget.dart": code}, self.RULES), [])
 
 
+class FalsePositivesTest(unittest.TestCase):
+    def test_closure_forwarding_an_enum_value_is_allowed(self):
+        code = """
+            final class A extends StatelessWidget {
+              Widget build(BuildContext context) => B(onTap: () => _onChosen(context, Choice.replace, isOn));
+              void _onChosen(BuildContext context, Choice choice, bool isOn) {}
+            }
+        """
+        self.assertEqual(run({WIDGETS + "a_widget.dart": code}, {"inline_callbacks"}), [])
+
+    def test_mounted_guard_joined_by_or_is_a_guard(self):
+        code = """
+            final class A extends StatelessWidget {
+              Future<void> _onPressed(BuildContext context) async {
+                final bool? ok = await showDialog<bool>(context: context, builder: _dialog);
+                if (ok == null || !context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('x')));
+              }
+            }
+        """
+        self.assertEqual(run({WIDGETS + "a_widget.dart": code}, {"async_gap_context_mounted"}), [])
+
+
 if __name__ == "__main__":
     unittest.main()

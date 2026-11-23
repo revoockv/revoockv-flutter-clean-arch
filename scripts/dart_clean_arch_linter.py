@@ -915,7 +915,7 @@ def check_inline_callbacks(result: AnalysisResult) -> None:
                     # If the body is a single method call that forwards
                     # constructor parameters (this.xxx or parameter names), allow it.
                     if re.match(r'_\w+\s*\(\s*this\.\w+', closure_body) or \
-                       re.match(r'_\w+\s*\(\s*\w+(?:\s*,\s*\w+)*\s*\)', closure_body) and \
+                       re.match(r'_\w+\s*\(\s*\w+(?:\.\w+)*(?:\s*,\s*\w+(?:\.\w+)*)*\s*\)', closure_body) and \
                        not re.search(r'\bif\b|\belse\b|\bfor\b|\bwhile\b|\btry\b|\bcatch\b|\breturn\b', closure_body):
                         continue
 
@@ -1602,7 +1602,9 @@ def check_async_gap_context_mounted(result: AnalysisResult) -> None:
         # Accept both: if (!context.mounted) return; and if (!mounted) return;
         has_mounted_guard = False
         for j in range(search_start, i - 1):
-            if re.search(r'if\s*\(\s*!?\s*(context\.)?mounted\s*\)', lines[j]):
+            # also a guard joined by ||: `if (x == null || !context.mounted) return;`
+            if re.search(r'if\s*\(\s*!?\s*(context\.)?mounted\s*\)', lines[j]) or \
+               re.search(r'if\s*\(.*\|\|\s*!\s*(context\.)?mounted\s*\)', lines[j]):
                 has_mounted_guard = True
                 break
 
