@@ -909,12 +909,141 @@ class UseCaseImportsTest(unittest.TestCase):
 class ExampleAppTest(unittest.TestCase):
     def test_example_app_has_no_violations(self):
         with contextlib.redirect_stdout(io.StringIO()):
-            report = linter.analyze(str(EXAMPLE_LIB), linter.ALL_RULES.copy(), json_output=True)
+            template = templates.resolve()
+            linter.configure(template)
+            rules = linter.ALL_RULES - (linter.OPT_IN_RULES - set(template.lint_on)) - set(template.lint_off)
+            report = linter.analyze(str(EXAMPLE_LIB), rules, json_output=True)
         violations = [(r.file, v.rule, v.line, v.message) for r in report.results for v in r.violations]
         self.assertEqual(violations, [])
 
     def test_every_rule_has_a_checker(self):
         self.assertEqual(linter.ALL_RULES, set(linter.CHECKERS))
+
+
+
+class WatchSelectTest(unittest.TestCase):
+    RULES = {"watch_select"}
+
+    def test_part_of_a_watched_value_is_a_violation(self):
+        code = """
+            final class ButtonWidget extends WatchingWidget {
+              @override
+              Widget build(BuildContext context) {
+                final bool isLoading = watch(savingState).value.isLoading;
+                final int count = watch(
+                  watchNotesUseCase(),
+                ).value.where((Note note) => note.isDone).length;
+                final String text = watch(textController).value?.text ?? '';
+                return Text('$isLoading $count $text');
+              }
+            }
+        """
+        self.assertEqual([line for _, _, line in run({WIDGETS + "button_widget.dart": code}, self.RULES)], [5, 6, 9])
+
+    def test_whole_value_and_selector_are_valid(self):
+        code = """
+            final class ButtonWidget extends WatchingWidget {
+              @override
+              Widget build(BuildContext context) {
+                final ResultState<List<Note>, NoteFailure> notes = watch(watchNotesUseCase()).value;
+                final bool isLoading = watchPropertyValue(
+                  (ValueListenable<ResultState<void, NoteFailure>> state) => state.value.isLoading,
+                  target: savingState,
+                );
+                return Text('$notes $isLoading');
+              }
+            }
+        """
+        self.assertEqual(run({WIDGETS + "button_widget.dart": code}, self.RULES), [])
+
+    def test_filtered_items_are_valid(self):
+        code = """
+            final class ListWidget extends WatchingWidget {
+              @override
+              Widget build(BuildContext context) {
+                final List<Note> notes = watch(
+                  watchNotesUseCase(),
+                ).value.where((Note note) => note.isDone).toList();
+                return Text('$notes');
+              }
+            }
+        """
+        self.assertEqual(run({WIDGETS + "list_widget.dart": code}, self.RULES), [])
+
+    def test_watch_property_value_alone_makes_a_watching_widget(self):
+        code = """
+            final class ButtonWidget extends WatchingWidget {
+              @override
+              Widget build(BuildContext context) {
+                final bool hasText = watchPropertyValue((TextEditingController c) => c.text.isNotEmpty, target: c);
+                return Text('$hasText');
+              }
+            }
+        """
+        self.assertEqual(run({WIDGETS + "button_widget.dart": code}, {"watching_widget", "watch_order"}), [])
+
+    def test_watch_property_value_inside_if_breaks_the_order(self):
+        code = """
+            final class ButtonWidget extends WatchingWidget {
+              @override
+              Widget build(BuildContext context) {
+                if (shown) {
+                  final bool hasText = watchPropertyValue((TextEditingController c) => c.text.isNotEmpty, target: c);
+                }
+                return const SizedBox();
+              }
+            }
+        """
+        self.assertEqual(run({WIDGETS + "button_widget.dart": code}, {"watch_order"}),
+                         [("button_widget.dart", "watch_order", 6)])
+
+
+class CoreWidgetsPureTest(unittest.TestCase):
+    RULES = {"core_widgets_pure"}
+    CORE = "core/presentation/widgets/"
+
+    def setUp(self):
+        self._dirs = linter.CORE_WIDGET_DIRS
+        linter.CORE_WIDGET_DIRS = ("core/presentation/widgets",)
+
+    def tearDown(self):
+        linter.CORE_WIDGET_DIRS = self._dirs
+
+    def test_flutter_kit_and_theme_imports_are_valid(self):
+        code = """
+            import 'package:flutter/material.dart';
+
+            import '../theme.dart';
+            import 'other_widget.dart';
+
+            final class ProgressButtonWidget extends StatelessWidget {
+              @override
+              Widget build(BuildContext context) => const SizedBox();
+            }
+        """
+        self.assertEqual(run({self.CORE + "progress_button_widget.dart": code}, self.RULES), [])
+
+    def test_state_features_and_watching_widgets_are_violations(self):
+        code = """
+            import 'package:flutter/material.dart';
+            import 'package:watch_it/watch_it.dart';
+            import 'package:app/features/notes/domain/entities/note.dart';
+            import '../../../features/notes/presentation/di/notes_getters.dart';
+            import '../l10n/app_translations.dart';
+
+            final class NoteButtonWidget extends WatchingWidget {
+              @override
+              Widget build(BuildContext context) => const SizedBox();
+            }
+        """
+        lines = [line for _, _, line in run({self.CORE + "note_button_widget.dart": code}, self.RULES)]
+        self.assertEqual(lines, [3, 4, 5, 6, 8])
+
+    def test_widgets_outside_the_kit_are_not_checked(self):
+        code = """
+            import 'package:watch_it/watch_it.dart';
+        """
+        self.assertEqual(run({WIDGETS + "list_widget.dart": code}, self.RULES), [])
 
 
 if __name__ == "__main__":

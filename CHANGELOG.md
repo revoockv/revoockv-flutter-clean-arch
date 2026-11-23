@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.11.0] - 2026-11-23
+
+### Changed
+- README is short: what the skill is for, install, use, templates, scripts. What a template enforces and the
+  packages it pins live only in the template.
+
+### Added
+- A pushed tag `vX.Y.Z` makes GitHub Actions run the tests and create the GitHub release, with the
+  `## [X.Y.Z]` section of this file as its notes (`.github/workflows/release.yml`).
+- Opt-in lint rules, turned on by a template's `[lint] on` (templates made before them keep passing):
+  - `watch_select` — `watch(x).value.part` rebuilds on every change of the whole value; use
+    `watchPropertyValue(_partOf, target: x)`.
+  - `core_widgets_pure` — widgets of `[lint.params] core_widget_dirs` (the ones several features use) import only
+    Flutter, other core widgets and the theme, and are never Watching widgets.
+- `watchPropertyValue()` counts as a watch_it call for `watching_widget` and `watch_order`.
+- `templates.py validate` checks `[lint] on` and the `core_widget_dirs` parameter.
+- revoockv-original@2.0.0 uses both (template changelog).
+
 ## [0.10.0] - 2026-11-13
 
 ### Changed (breaking) — templates
