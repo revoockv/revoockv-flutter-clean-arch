@@ -1,6 +1,6 @@
 # revoockv-flutter-clean-arch
 
-An agent skill (Claude Code, Cursor, Codex and other agents that read `SKILL.md`) for building Flutter apps with clean architecture by **templates**. A template holds every choice of the architecture and code style — folders, state manager, DI, use cases, errors, models, style, tests, git — split into small rule files, plus an example project built with all of it. The default template, `revoockv-original`, is clean architecture on **GetIt + watch_it** and `ValueNotifier`-based reactive state. Make your own template from it (`docs/constructor.md`); templates have their own versions, the skill has its own.
+An agent skill (Claude Code, Cursor, Codex and other agents that read `SKILL.md`) for building Flutter apps with clean architecture by **templates**. A template holds every choice of the architecture and code style — folders, state manager, DI, use cases, errors, models, style, tests, git — split into small rule files, plus an example project built with all of it. Make your own template from it (`docs/constructor.md`); templates have their own versions, the skill has its own.
 
 The agent uses it to create features, refactor or migrate existing ones (from Riverpod, Bloc or streams), wire DI per feature, map data models to domain entities and build UI with as few and as low rebuilds as possible. A linter checks the result.
 
@@ -37,18 +37,17 @@ Ask the agent in plain words, for example:
 - "Refactor `lib/features/profile` to the clean architecture"
 - "Migrate this Bloc screen to watch_it"
 
-The agent follows `SKILL.md` and the references, then runs the linter.
+The agent follows `SKILL.md` and the project's template, then runs the linter.
 
-## What it enforces (template `revoockv-original`)
+## Templates
 
-- **Layers per feature:** `data` / `domain` / `presentation`; `core` mirrors the same layout.
-- **DI:** one `registerAndInit<Feature>()` per feature, registered by type in GetIt; widgets reach use cases only through `<feature>_getters.dart`.
-- **State:** repositories keep a private `ValueNotifier` and expose `ValueListenable<ResultState<T>>`; widgets read it with `watch(watch<Name>UseCase()).value` and `switch` over it.
-- **Results:** actions return `Future<Result<T>>`; failures are human-readable messages, exceptions are logged.
-- **UI controllers:** UI state only, like `TextEditingController` — no DI, no use cases; named `<noun>Controller`; owned by a `WatchingWidget` with `createOnce`, which calls the use cases itself.
-- **Ids:** UUID v4 created in the data source.
-- **Tests:** a test DI per feature with fake data sources; the app code stays as it is.
-- **Conventions:** naming, no magic numbers/strings/colors, Dartdoc on every public declaration, logging, git rules.
+| Template | In short |
+|---|---|
+| `revoockv-original` (default) | GetIt + watch_it, `ValueNotifier` state, use cases for everything |
+| `revoockv-bloc` | flutter_bloc, dependencies in the widget tree |
+
+What a template enforces, and the packages it pins, are in its own files: `templates/<name>/<version>/template.toml`
+(the choices), `rules/` and `templates/<name>/CHANGELOG.md`.
 
 ## Contents
 
@@ -75,14 +74,14 @@ python3 scripts/templates.py new my-arch --from revoockv-original@1.0.0
 python3 scripts/templates.py bump my-arch --to 1.1.0
 python3 scripts/templates.py validate --all
 
-# architecture linter (30 rules) on a Flutter project
+# architecture linter on a Flutter project (it follows the project's template)
 python3 scripts/dart_clean_arch_linter.py path/to/app/lib --strict
 
 # folder skeleton and DI stubs for a new project or feature
 python3 scripts/init_feature.py --core --lib-dir path/to/app/lib
 python3 scripts/init_feature.py --feature notes --lib-dir path/to/app/lib
 
-# pinned package versions vs pub.dev
+# the template's pinned package versions vs pub.dev
 python3 scripts/check_versions.py
 
 # self-check of every template: rules vs example, example analyze/test/lint
@@ -90,10 +89,6 @@ python3 scripts/selfcheck.py
 ```
 
 `selfcheck.py` and the example app need the Flutter SDK (Dart `^3.12.0`); `--no-flutter` skips those steps.
-
-## Packages
-
-`get_it ^9.3.0`, `watch_it ^2.5.0`, `logger ^2.8.0`, `uuid ^4.6.0`, `flutter_lints ^6.0.0`.
 
 ## Versioning
 

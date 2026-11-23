@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- README is short: what the skill is for, install, use, templates, scripts. What a template enforces and the
+  packages it pins live only in the template.
+
 ### Added
 - A pushed tag `vX.Y.Z` makes GitHub Actions run the tests and create the GitHub release, with the
   `## [X.Y.Z]` section of this file as its notes (`.github/workflows/release.yml`).
