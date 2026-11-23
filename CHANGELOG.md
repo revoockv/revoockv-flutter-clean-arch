@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased]
+
+### Fixed
+- Linter: `inline_callbacks` allows a closure that forwards dotted values (`() => _onChosen(context, Choice.replace)`);
+  `async_gap_context_mounted` accepts a guard joined by `||` (`if (x == null || !context.mounted) return;`).
+
 ## [0.11.0] - 2026-11-23
 
 ### Changed
