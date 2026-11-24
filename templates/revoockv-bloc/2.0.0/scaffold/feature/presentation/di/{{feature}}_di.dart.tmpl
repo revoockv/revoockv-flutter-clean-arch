@@ -1,0 +1,25 @@
+import 'package:flutter/widgets.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+/// The {{feature}} feature in the tree, bottom-up: data sources → repositories → use cases.
+///
+/// Put it into `AppProvidersWidget` (`lib/di.dart`); blocs are created by `BlocProvider` on the pages.
+final class {{Feature}}ProvidersWidget extends StatelessWidget {
+  /// The widgets below.
+  final Widget child;
+
+  /// Creates the providers.
+  const {{Feature}}ProvidersWidget({required this.child, super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiRepositoryProvider(
+      providers: <RepositoryProvider<Object>>[
+        // RepositoryProvider<XDataSource>(create: _createDataSource, dispose: _disposeDataSource),
+        // RepositoryProvider<XRepository>(create: _createRepository),
+        // RepositoryProvider<DoXUseCase>(create: _createDoXUseCase),
+      ],
+      child: child,
+    );
+  }
+}

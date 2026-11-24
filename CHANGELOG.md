@@ -15,6 +15,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   and private classes are left alone).
 - Templates revoockv-original 2.1.0 and revoockv-bloc 1.1.0: objects, not maps (`rules/errors_models/objects_not_maps.md`),
   with the rule on.
+- Template revoockv-bloc 2.0.0: typed failures `Result<T, F>` with a failure enum per feature and its text in
+  `presentation/l10n`, as in revoockv-original.
 
 ## [0.11.1] - 2026-11-23
 
