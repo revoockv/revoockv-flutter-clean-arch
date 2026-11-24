@@ -2646,7 +2646,8 @@ _DUMB_WIDGET_FORBIDDEN = re.compile(
 )
 _STATE_READ = re.compile(r'\bcontext\.(?:read|watch|select)\s*<|\b(?:watch|watchValue|watchPropertyValue|watchIt|'
                          r'registerHandler|createOnce|callOnce)\s*[<(]')
-_ACTION_USE_CASE_CALL = re.compile(r'\b(?!watch)[a-z]\w*UseCase\s*\(')
+# A use case that starts something; watch… and the pure derivations calculate… / build… / find… are not actions.
+_ACTION_USE_CASE_CALL = re.compile(r'\b(?!watch|calculate|build|find)[a-z]\w*UseCase\s*\(')
 _CONTEXT_READ = re.compile(r'\bcontext\.read\s*<')
 
 
@@ -2693,8 +2694,8 @@ def check_widgets_dumb(result: AnalysisResult) -> None:
 def check_wrappers_no_actions(result: AnalysisResult) -> None:
     """A wrapper (`presentation/wrappers/`) selects state for one widget and starts nothing.
 
-    Watch use cases are fine (`watchNotesUseCase()`); an action use case or `context.read<…>()` (a cubit's method)
-    belongs to the page, which passes it down as a callback.
+    Watch use cases (`watchNotesUseCase()`) and pure derivations (`calculate…`, `build…`, `find…`) are fine; an action
+    use case or `context.read<…>()` (a cubit's method) belongs to the page, which passes it down as a callback.
     """
     if not _in_presentation_folder(result.file, 'wrappers'):
         return

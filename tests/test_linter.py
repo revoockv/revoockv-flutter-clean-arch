@@ -1178,6 +1178,8 @@ class DumbWidgetsAndWrappersTest(unittest.TestCase):
               @override
               Widget build(BuildContext context) {
                 final Note? note = watchPropertyValue(_noteOf, target: watchNotesUseCase());
+                final Stats stats = calculateStatsUseCase(notes: notes);
+                final List<int> entries = buildTimelineUseCase(notes: notes);
                 return const SizedBox();
               }
             }
