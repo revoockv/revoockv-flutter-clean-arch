@@ -1213,6 +1213,18 @@ class DumbWidgetsAndWrappersTest(unittest.TestCase):
         self.assertTrue({"widgets_dumb", "wrappers_no_actions"} <= linter.OPT_IN_RULES)
 
 
+class LongConstructorKeyTest(unittest.TestCase):
+    def test_super_key_after_many_parameters_is_found(self):
+        params = "".join(f"    required this.p{i},\n" for i in range(12))
+        fields = "".join(f"  final int p{i};\n" for i in range(12))
+        code = (
+            "final class LongWidget extends StatelessWidget {\n" + fields +
+            "  const LongWidget({\n" + params + "    super.key,\n  });\n"
+            "  @override\n  Widget build(BuildContext context) => const SizedBox();\n}\n"
+        )
+        self.assertEqual(run({"features/notes/presentation/widgets/long_widget.dart": code}, {"widget_key_parameter"}), [])
+
+
 class FeatureDependenciesTest(unittest.TestCase):
     RULES = {"feature_dependencies"}
 

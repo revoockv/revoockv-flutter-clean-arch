@@ -1785,10 +1785,12 @@ def check_widget_key_parameter(result: AnalysisResult) -> None:
             # Look at the constructor line and possibly the next few lines
             constructor_text = ""
             brace_depth = 0
-            for j in range(constructor_line - 1, min(constructor_line + 9, len(lines))):
+            # The whole parameter list, however many lines: up to the line that closes it (`});` / `);` / `}) :`).
+            paren_depth = 0
+            for j in range(constructor_line - 1, len(lines)):
                 constructor_text += lines[j]
-                brace_depth += lines[j].count('{') - lines[j].count('}')
-                if brace_depth <= 0 and '{' in lines[j]:
+                paren_depth += lines[j].count('(') - lines[j].count(')')
+                if paren_depth <= 0:
                     break
 
             # Check for named key parameter: {Key? key} or {required Key key} or {Key key} or super.key
