@@ -26,6 +26,33 @@ main           ← stable, always runnable, tagged with releases
 | `hotfix/<num>-<name>` | Urgent fix of the released version on `main` — see "Hotfix branches" |
 | `release/<version>` | Preparing a release: version number, changelog, dependency updates, build/CI settings, fixes found while testing it — see "Release branches" |
 
+### Choose the type — before the branch is created
+
+The type is chosen once, before `git switch -c`, by these questions in order; the first "yes" is the type. Do not
+choose by the size of the work or by how it feels ("it adds a lot of code, so it is a feature").
+
+1. Did the user name the type ("рефакторинг", "фікс", "refactor", "a feature")? → that type. The user's word wins.
+2. Is a released version broken and the fix urgent? → `hotfix`.
+3. Does something work wrong that was meant to work (a crash, a wrong result, a chord not found)? → `fix`.
+4. Can the user of the app do or see something new after it? → `feature`.
+5. Is the behavior the same, but the code or the architecture rules are arranged differently? → `refactor`.
+   This includes a new architecture rule and moving the code to it ("objects, not maps", a new folder rule, a new
+   lint rule with the template version that turns it on), renames, splitting files, a new model for an old format.
+6. Only text for people changes (README, comments, a rule's wording, a changelog)? → `docs`.
+7. Only tests change? → `test`. Only formatting or lint fixes without logic? → `style`.
+
+Wrong → right:
+
+| Work | Wrong | Right | Why |
+|---|---|---|---|
+| Add "objects, not maps" to the templates, a lint rule, move the code to objects | `feature/` | `refactor/` | nothing new for the user; the code and its rules are rearranged |
+| Chords are coloured in the lyrics | `refactor/` | `feature/` | the user sees something new |
+| `D7sus` is not found as a chord, found after the change | `feature/` | `fix/` | the chords were meant to be found |
+| Clarify how to choose a branch type | `refactor/` | `docs/` | only the text of a rule changes |
+
+Say the chosen type and the reason in one line to the user when the branch is created; if the user corrects it, rename
+the branch (`git branch -m`) and reword its commits before they are pushed.
+
 ### Branch naming
 
 - `<num>` is the task number: the issue/ticket number of your tracker, or a running counter when the project has no tracker.
@@ -36,8 +63,11 @@ main           ← stable, always runnable, tagged with releases
 ### Branch flow
 
 1. Create the branch from `develop`: `git switch -c feature/001-user-profile develop`
-2. Work and commit on the branch.
-3. When done, merge into `develop` with a merge commit in the commit format:
+2. Work and commit on the branch. Corrections of the same task (a bug found while checking it, a missed case) are
+   commits on the same branch, in its type — not a new branch.
+3. Merge into `develop` only when the user confirms that the task is solved (or starts a new feature or fix, which
+   closes the finished one); until then the work stays committed on the branch. Merge with a merge commit in the
+   commit format:
    ```bash
    git switch develop
    git merge --no-ff feature/001-user-profile -m "[FEAT-001] merge user profile into develop"

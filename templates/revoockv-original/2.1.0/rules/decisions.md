@@ -50,7 +50,8 @@ Quick answers; the file says the details. When in doubt, copy `rules/examples/au
 | Inject dependencies | private named parameters `({required this._dataSource})` | `style/dart_style.md` |
 | Dartdoc, logging, imports | every public declaration documented; logger injected | `style/*.md` |
 | Tests | every layer; a test DI per feature with fake data sources | `testing/testing.md`, `example/test/` |
-| Commits and branches | `[TYPE-NNN] …`, `--no-ff` merges, branches kept | `git/git_rules.md` |
+| Commits and branches | `[TYPE-NNN] …`, `--no-ff` merges after the user confirms, branches kept | `git/git_rules.md` |
+| Choose `feature` / `fix` / `refactor` / `docs` | the questions of "Choose the type", in order, before the branch is created; the user's word wins | `git/git_rules.md` |
 
 ## Migrating from Riverpod / Bloc / streams
 
