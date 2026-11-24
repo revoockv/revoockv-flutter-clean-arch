@@ -42,12 +42,12 @@ final class NotesStatistics {
 
   /// Counts [facts]; "today" is the day of [now].
   factory NotesStatistics.of(List<NoteFacts> facts, {required DateTime now}) => NotesStatistics(
-        notes: facts.length,
-        words: facts.fold<int>(0, (int sum, NoteFacts note) => sum + _wordsOf(note.text)),
-        addedToday: facts.where((NoteFacts note) => _sameDay(note.createdAt, now)).length,
-        edited: facts.where((NoteFacts note) => note.updatedAt != note.createdAt).length,
-        pinned: facts.where((NoteFacts note) => note.isPinned).length,
-      );
+    notes: facts.length,
+    words: facts.fold<int>(0, (int sum, NoteFacts note) => sum + _wordsOf(note.text)),
+    addedToday: facts.where((NoteFacts note) => _sameDay(note.createdAt, now)).length,
+    edited: facts.where((NoteFacts note) => note.updatedAt != note.createdAt).length,
+    pinned: facts.where((NoteFacts note) => note.isPinned).length,
+  );
 
   static int _wordsOf(String text) {
     final String trimmed = text.trim();

@@ -83,7 +83,7 @@ tracked = ["flutter_bloc", "bloc_test", "logger", "uuid", "flutter_lints"]
 # Rules of the watch_it model; this template has no watch_it, ValueNotifier state or GetIt.
 off = ["watching_widget", "watch_order", "value_listenable_exposure", "no_state_in_di", "no_controller_in_ui"]
 # Opt-in rules this template turns on.
-on = ["objects_not_maps", "widgets_dumb", "wrappers_no_actions", "feature_dependencies"]
+on = ["objects_not_maps", "widgets_dumb", "wrappers_no_actions", "feature_dependencies", "one_widget_per_file"]
 warn = []
 
 [lint.params]

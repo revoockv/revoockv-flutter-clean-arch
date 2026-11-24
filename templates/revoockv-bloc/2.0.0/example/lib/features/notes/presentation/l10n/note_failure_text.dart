@@ -10,10 +10,10 @@ extension NoteFailureText on NoteFailure {
 
   /// The human-readable text of this failure.
   String get text => switch (this) {
-        NoteFailure.emptyText => _emptyText,
-        NoteFailure.add => _add,
-        NoteFailure.update => _update,
-        NoteFailure.delete => _delete,
-        NoteFailure.load => _load,
-      };
+    NoteFailure.emptyText => _emptyText,
+    NoteFailure.add => _add,
+    NoteFailure.update => _update,
+    NoteFailure.delete => _delete,
+    NoteFailure.load => _load,
+  };
 }

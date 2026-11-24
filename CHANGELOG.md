@@ -9,6 +9,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Linter rule `one_widget_per_file` (opt-in, on in revoockv-original 3.0.0 and revoockv-bloc 2.0.0): one public
+  widget per file in `presentation/`; a private helper widget only while it is small (40 lines) and reads no state;
+  one that reads state is a hidden wrapper. `naming_file` / `naming_class` allow `_view.dart` / `…View` in `pages/`
+  (the bloc page's view below its providers).
 - Linter rule `objects_not_maps` (opt-in through `[lint] on`): a record map (`Map<String, dynamic>`,
   `Map<String, Object?>`, `Map<dynamic, dynamic>`) outside `data/models/` and `data/data_sources/`, and a `Map` in the public API of `domain/`
   and `presentation/` (fields, getters, parameters and return types of public declarations; locals, private members

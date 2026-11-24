@@ -72,6 +72,18 @@ The page is the smart one: it owns the UI controller or creates the blocs, start
 outcome (snackbars, dialogs, navigation) and holds the texts. It places wrappers and dumb widgets and **never
 rebuilds itself**.
 
+## One widget per file
+
+Every page, wrapper and widget has a file of its own (linter: `one_widget_per_file`):
+
+- one public widget per file — its `State` and its `…Texts` class stay with it;
+- a private helper widget may stay next to it only while it is **small** (40 lines at most) and **dumb**; a bigger
+  one goes to `widgets/` as a public widget, with a file of its own;
+- a private widget that reads state (watch_it, `BlocBuilder` / `BlocSelector` / `BlocListener`, `context.read`) is a
+  hidden wrapper: it goes to `wrappers/` as a public `…Wrapper`;
+- a page file holds the page alone: its tabs, sections and counters are wrappers, and the searching, ordering and
+  picking of what they show are use cases, not static helpers of the page.
+
 ## Lists
 
 - `ListView.builder`; every item is a wrapper with `key: ValueKey<String>(id)`.

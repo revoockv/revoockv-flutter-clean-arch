@@ -29,11 +29,14 @@ final class EditNoteDialogWidget extends StatefulWidget {
   const EditNoteDialogWidget({required this.initialText, required this.texts, super.key});
 
   /// Shows the dialog over [context]; completes with the new text or `null`.
-  static Future<String?> show(BuildContext context, {required String initialText, required EditNoteDialogTexts texts}) =>
-      showDialog<String>(
-        context: context,
-        builder: (BuildContext context) => EditNoteDialogWidget(initialText: initialText, texts: texts),
-      );
+  static Future<String?> show(
+    BuildContext context, {
+    required String initialText,
+    required EditNoteDialogTexts texts,
+  }) => showDialog<String>(
+    context: context,
+    builder: (BuildContext context) => EditNoteDialogWidget(initialText: initialText, texts: texts),
+  );
 
   @override
   State<EditNoteDialogWidget> createState() => _EditNoteDialogWidgetState();

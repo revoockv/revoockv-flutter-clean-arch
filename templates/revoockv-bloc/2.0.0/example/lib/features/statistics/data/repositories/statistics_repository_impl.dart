@@ -85,7 +85,9 @@ final class StatisticsRepositoryImpl implements StatisticsRepository {
       SuccessResult<List<Note>, NoteFailure>(value: final List<Note> stored),
       SuccessResult<PinnedNotes, PinFailure>(value: final PinnedNotes pinned),
     ) =>
-      Result.success(NotesStatistics.of(<NoteFacts>[for (final Note note in stored) _factsOf(note, pinned)], now: _now())),
+      Result.success(
+        NotesStatistics.of(<NoteFacts>[for (final Note note in stored) _factsOf(note, pinned)], now: _now()),
+      ),
     _ => _failed(),
   };
 

@@ -20,7 +20,9 @@ final class StatisticsBloc extends Bloc<StatisticsEvent, StatisticsState> {
       emit.forEach<Result<NotesStatistics, StatisticsFailure>>(_watchNotesStatisticsUseCase(), onData: _toState);
 
   static StatisticsState _toState(Result<NotesStatistics, StatisticsFailure> result) => switch (result) {
-        SuccessResult<NotesStatistics, StatisticsFailure>(:final NotesStatistics value) => StatisticsLoaded(value),
-        FailureResult<NotesStatistics, StatisticsFailure>(:final StatisticsFailure failure) => StatisticsLoadFailed(failure),
-      };
+    SuccessResult<NotesStatistics, StatisticsFailure>(:final NotesStatistics value) => StatisticsLoaded(value),
+    FailureResult<NotesStatistics, StatisticsFailure>(:final StatisticsFailure failure) => StatisticsLoadFailed(
+      failure,
+    ),
+  };
 }

@@ -20,6 +20,10 @@ Versions of this template. The skill itself has its own versions (`CHANGELOG.md`
   `context.select` exactly what one dumb widget shows and starts nothing; widgets in `widgets/` are dumb — the same
   files as in revoockv-original 3.0.0. An edited note rebuilds one tile (`example/test/rebuilds_test.dart`).
 - Lint: `widgets_dumb`, `wrappers_no_actions` and `feature_dependencies` on.
+- One widget per file (`rules/state/wrappers.md`, lint `one_widget_per_file`, on): one public widget per file;
+  a private helper only while it is small (40 lines) and dumb; a private widget that reads state is a wrapper in
+  `wrappers/`. A page is `XPage` (the providers) and `XView` (`pages/x_view.dart`, the rest) — the example's
+  `NotesView` and `HomeView`; the linter allows `_view.dart` / `…View` in `pages/`.
 - One feature uses another (`rules/structure/feature_dependencies.md`), as in revoockv-original 3.0.0: the **pins**
   feature (`PinsBloc`, `PinActionsCubit`, `PinButtonWrapper`); notes use it, statistics count notes and pins through
   their repositories; `PinsProvidersWidget` sits above the features that use it.

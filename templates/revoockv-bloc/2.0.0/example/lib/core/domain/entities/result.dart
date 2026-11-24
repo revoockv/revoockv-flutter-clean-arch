@@ -26,21 +26,17 @@ sealed class Result<T, F> {
   bool get isFailure => this is FailureResult<T, F>;
 
   /// Calls [success] with the value or [failure] with the failure.
-  R when<R>({
-    required R Function(T value) success,
-    required R Function(F failure) failure,
-  }) =>
-      switch (this) {
-        SuccessResult<T, F>(:final T value) => success(value),
-        FailureResult<T, F>(failure: final F reason) => failure(reason),
-      };
+  R when<R>({required R Function(T value) success, required R Function(F failure) failure}) => switch (this) {
+    SuccessResult<T, F>(:final T value) => success(value),
+    FailureResult<T, F>(failure: final F reason) => failure(reason),
+  };
 
   /// The same result with the failure turned into [G] by [map] — for a use case that
   /// passes on a failure of another feature as its own.
   Result<T, G> mapFailure<G>(G Function(F failure) map) => switch (this) {
-        SuccessResult<T, F>(:final T value) => SuccessResult<T, G>(value),
-        FailureResult<T, F>(:final F failure) => FailureResult<T, G>(map(failure)),
-      };
+    SuccessResult<T, F>(:final T value) => SuccessResult<T, G>(value),
+    FailureResult<T, F>(:final F failure) => FailureResult<T, G>(map(failure)),
+  };
 }
 
 /// Successful [Result].

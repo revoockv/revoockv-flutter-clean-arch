@@ -1213,6 +1213,78 @@ class DumbWidgetsAndWrappersTest(unittest.TestCase):
         self.assertTrue({"widgets_dumb", "wrappers_no_actions"} <= linter.OPT_IN_RULES)
 
 
+class OneWidgetPerFileTest(unittest.TestCase):
+    RULES = {"one_widget_per_file"}
+    HEAD = """
+        import 'package:flutter/material.dart';
+        import 'package:watch_it/watch_it.dart';
+
+        /// A.
+        final class NotesWidget extends StatelessWidget {
+          /// Creates it.
+          const NotesWidget({super.key});
+          @override
+          Widget build(BuildContext context) => const _DotWidget();
+        }
+    """
+
+    def lint(self, folder, tail):
+        return run({f"features/notes/presentation/{folder}/notes_widget.dart": self.HEAD + tail}, self.RULES)
+
+    def test_a_small_dumb_helper_may_stay(self):
+        tail = """
+        final class _DotWidget extends StatelessWidget {
+          const _DotWidget();
+          @override
+          Widget build(BuildContext context) => const SizedBox();
+        }
+        """
+        self.assertEqual(self.lint("widgets", tail), [])
+
+    def test_a_second_public_widget_goes_to_its_own_file(self):
+        tail = """
+        /// B.
+        final class OtherWidget extends StatelessWidget {
+          /// Creates it.
+          const OtherWidget({super.key});
+          @override
+          Widget build(BuildContext context) => const SizedBox();
+        }
+        """
+        self.assertEqual([v[1] for v in self.lint("widgets", tail)], ["one_widget_per_file"])
+
+    def test_a_private_watching_widget_in_a_page_is_a_wrapper(self):
+        tail = """
+        final class _CountWidget extends WatchingWidget {
+          const _CountWidget();
+          @override
+          Widget build(BuildContext context) => Text('${watchValue((Model m) => m.count)}');
+        }
+        """
+        self.assertEqual([v[1] for v in self.lint("pages", tail)], ["one_widget_per_file"])
+
+    def test_a_private_bloc_builder_is_a_wrapper(self):
+        tail = """
+        final class _CountWidget extends StatelessWidget {
+          const _CountWidget();
+          @override
+          Widget build(BuildContext context) => BlocBuilder<CountCubit, int>(builder: (_, int n) => Text('$n'));
+        }
+        """
+        self.assertEqual([v[1] for v in self.lint("pages", tail)], ["one_widget_per_file"])
+
+    def test_a_big_private_widget_gets_its_own_file(self):
+        lines = "".join("            const SizedBox(),\n" for _ in range(45))
+        tail = (
+            "        final class _BigWidget extends StatelessWidget {\n"
+            "          const _BigWidget();\n"
+            "          @override\n"
+            "          Widget build(BuildContext context) => Column(children: <Widget>[\n" + lines +
+            "          ]);\n        }\n"
+        )
+        self.assertEqual([v[1] for v in self.lint("widgets", tail)], ["one_widget_per_file"])
+
+
 class LongConstructorKeyTest(unittest.TestCase):
     def test_super_key_after_many_parameters_is_found(self):
         params = "".join(f"    required this.p{i},\n" for i in range(12))

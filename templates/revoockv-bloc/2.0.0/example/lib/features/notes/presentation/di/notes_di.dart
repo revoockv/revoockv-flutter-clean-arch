@@ -25,11 +25,7 @@ final class NotesProvidersWidget extends StatelessWidget {
   final NotesDataSource Function(AppDatabase database) createDataSource;
 
   /// Creates the providers.
-  const NotesProvidersWidget({
-    required this.child,
-    this.createDataSource = _createDatabaseDataSource,
-    super.key,
-  });
+  const NotesProvidersWidget({required this.child, this.createDataSource = _createDatabaseDataSource, super.key});
 
   @override
   Widget build(BuildContext context) {

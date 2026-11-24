@@ -5,10 +5,6 @@ Versions of this template. The skill itself has its own versions (`CHANGELOG.md`
 ## [3.0.0]
 
 - Made from revoockv-original@2.1.0.
-
-## [3.0.0]
-
-- Made from revoockv-original@2.1.0.
 - Pages, wrappers and dumb widgets (`rules/state/wrappers.md`): the page owns the controller, starts the actions and
   reacts, and never rebuilds; a wrapper in the new `presentation/wrappers/` folder selects with `watchPropertyValue`
   exactly what one dumb widget shows and starts nothing; widgets in `widgets/` are dumb — data, texts and callbacks,
@@ -16,6 +12,9 @@ Versions of this template. The skill itself has its own versions (`CHANGELOG.md`
   (`StatefulWidget`). Parameter names as in Flutter (`hintText`, `addLabel`, `isAdding`, `onTap`, `onAddPressed`).
 - Lists: the list wrapper selects the ids, an item wrapper (keyed by id) selects its item, so an edited note rebuilds
   one tile. `example/test/rebuilds_test.dart` counts builds with `debugOnRebuildDirtyWidget`.
+- One widget per file (`rules/state/wrappers.md`, lint `one_widget_per_file`, on): one public widget per file;
+  a private helper only while it is small (40 lines) and dumb; a private widget that reads state is a wrapper in
+  `wrappers/`; a page file holds the page alone.
 - Lint: `widgets_dumb` and `wrappers_no_actions` on; `wrappers/` files and classes end with `_wrapper.dart` /
   `Wrapper`.
 - One feature uses another (`rules/structure/feature_dependencies.md`): through its domain and its UI parts, never its
