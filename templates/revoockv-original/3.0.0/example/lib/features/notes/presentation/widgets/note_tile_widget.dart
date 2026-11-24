@@ -9,6 +9,9 @@ final class NoteTileWidget extends StatelessWidget {
   /// The note to show.
   final Note note;
 
+  /// Shown before the text — another feature's widget (the pin button), placed by the page.
+  final Widget leading;
+
   /// Tooltip of the delete button.
   final String deleteTooltip;
 
@@ -21,6 +24,7 @@ final class NoteTileWidget extends StatelessWidget {
   /// Creates the tile.
   const NoteTileWidget({
     required this.note,
+    required this.leading,
     required this.deleteTooltip,
     required this.onTap,
     required this.onDeletePressed,
@@ -30,6 +34,7 @@ final class NoteTileWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
+      leading: leading,
       title: Text(note.text),
       onTap: _onTap,
       trailing: IconButton(icon: const Icon(Icons.delete_outline), tooltip: deleteTooltip, onPressed: _onDeletePressed),

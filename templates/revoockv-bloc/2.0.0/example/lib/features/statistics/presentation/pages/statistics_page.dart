@@ -29,6 +29,7 @@ final class _StatisticsViewWidget extends StatelessWidget {
   static const String _wordsLabel = 'Words';
   static const String _addedTodayLabel = 'Added today';
   static const String _editedLabel = 'Edited';
+  static const String _pinnedLabel = 'Pinned';
 
   const _StatisticsViewWidget();
 
@@ -40,6 +41,7 @@ final class _StatisticsViewWidget extends StatelessWidget {
         StatisticTileWrapper(label: _wordsLabel, countOf: _wordsOf),
         StatisticTileWrapper(label: _addedTodayLabel, countOf: _addedTodayOf),
         StatisticTileWrapper(label: _editedLabel, countOf: _editedOf),
+        StatisticTileWrapper(label: _pinnedLabel, countOf: _pinnedOf),
       ],
     );
   }
@@ -51,4 +53,6 @@ final class _StatisticsViewWidget extends StatelessWidget {
   static int _addedTodayOf(NotesStatistics statistics) => statistics.addedToday;
 
   static int _editedOf(NotesStatistics statistics) => statistics.edited;
+
+  static int _pinnedOf(NotesStatistics statistics) => statistics.pinned;
 }

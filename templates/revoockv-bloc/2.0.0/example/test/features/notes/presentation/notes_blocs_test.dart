@@ -13,18 +13,30 @@ import 'package:example_app/features/notes/presentation/blocs/notes_event.dart';
 import 'package:example_app/features/notes/presentation/blocs/notes_state.dart';
 import 'package:logger/logger.dart';
 
+import 'package:example_app/core/data/data_sources/in_memory_app_database.dart';
+import 'package:example_app/features/pins/data/data_sources/database_pins_data_source.dart';
+import 'package:example_app/features/pins/data/repositories/pins_repository_impl.dart';
+
 import '../fake_notes_data_sources.dart';
 import 'package:example_app/features/notes/domain/entities/note_failure.dart';
 
-NotesRepositoryImpl repositoryOf(NotesDataSource dataSource) =>
-    NotesRepositoryImpl(dataSource: dataSource, logger: Logger(level: Level.off));
+NotesRepositoryImpl repositoryOf(NotesDataSource dataSource) => NotesRepositoryImpl(
+  dataSource: dataSource,
+  logger: Logger(level: Level.off),
+);
 
 NoteActionsCubit actionsOn(NotesDataSource dataSource) {
   final NotesRepositoryImpl repository = repositoryOf(dataSource);
   return NoteActionsCubit(
     addNoteUseCase: AddNoteUseCase(repository),
     updateNoteUseCase: UpdateNoteUseCase(repository),
-    deleteNoteUseCase: DeleteNoteUseCase(repository),
+    deleteNoteUseCase: DeleteNoteUseCase(
+      repository,
+      PinsRepositoryImpl(
+        dataSource: DatabasePinsDataSource(database: InMemoryAppDatabase(latency: Duration.zero)),
+        logger: Logger(level: Level.off),
+      ),
+    ),
   );
 }
 

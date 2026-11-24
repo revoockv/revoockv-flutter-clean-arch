@@ -1,6 +1,6 @@
-/// What statistics need to know about one note.
+/// What the statistics need to know about one note — no more.
 final class NoteFacts {
-  /// Text of the note.
+  /// Text of the note (its words are counted).
   final String text;
 
   /// When the note was written.
@@ -9,6 +9,9 @@ final class NoteFacts {
   /// When the note was last changed.
   final DateTime updatedAt;
 
+  /// Whether the note is pinned.
+  final bool isPinned;
+
   /// Creates the facts.
-  const NoteFacts({required this.text, required this.createdAt, required this.updatedAt});
+  const NoteFacts({required this.text, required this.createdAt, required this.updatedAt, required this.isPinned});
 }

@@ -16,6 +16,9 @@ final class NotesListWrapper extends StatelessWidget {
   /// Text shown when there are no notes.
   final String emptyText;
 
+  /// Builds what is shown before the text of the note [noteId] (the page puts the pin button there).
+  final Widget Function(String noteId) leadingBuilder;
+
   /// Tooltip of a note's delete button.
   final String deleteTooltip;
 
@@ -28,6 +31,7 @@ final class NotesListWrapper extends StatelessWidget {
   /// Creates the wrapper.
   const NotesListWrapper({
     required this.emptyText,
+    required this.leadingBuilder,
     required this.deleteTooltip,
     required this.onNoteTap,
     required this.onDeletePressed,
@@ -46,6 +50,7 @@ final class NotesListWrapper extends StatelessWidget {
         itemBuilder: (BuildContext context, String noteId) => NoteTileWrapper(
           key: ValueKey<String>(noteId),
           noteId: noteId,
+          leading: leadingBuilder(noteId),
           deleteTooltip: deleteTooltip,
           onTap: onNoteTap,
           onDeletePressed: onDeletePressed,

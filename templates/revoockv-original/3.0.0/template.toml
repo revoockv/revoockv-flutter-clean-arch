@@ -29,7 +29,7 @@ git = "develop + <type>/<NNN>-<name> branches, [TYPE-NNN] commits, --no-ff merge
 # Topic → files (relative to this folder). Read only the topics of the task.
 workflow = ["rules/workflow.md"]
 decisions = ["rules/decisions.md"]
-structure = ["rules/structure/folder_structure.md"]
+structure = ["rules/structure/folder_structure.md", "rules/structure/feature_dependencies.md"]
 state = [
   "rules/state/reactive_state_syntax.md",
   "rules/state/reactive_state_patterns.md",
@@ -102,7 +102,7 @@ tracked = ["get_it", "watch_it", "logger", "uuid", "flutter_lints"]
 # Rules this template turns off (none: all 33 apply).
 off = []
 # Opt-in rules this template turns on.
-on = ["watch_select", "core_widgets_pure", "objects_not_maps", "widgets_dumb", "wrappers_no_actions"]
+on = ["watch_select", "core_widgets_pure", "objects_not_maps", "widgets_dumb", "wrappers_no_actions", "feature_dependencies"]
 # Rules reported as warnings: shown, but `--strict` does not fail on them.
 warn = []
 

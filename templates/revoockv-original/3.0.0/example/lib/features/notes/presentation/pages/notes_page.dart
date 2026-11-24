@@ -5,6 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:watch_it/watch_it.dart';
 
 import '../../domain/entities/note.dart';
+import 'package:example_app/features/pins/domain/entities/pin_failure.dart';
+import 'package:example_app/features/pins/presentation/di/pins_getters.dart';
+import 'package:example_app/features/pins/presentation/l10n/pin_failure_text.dart';
+import 'package:example_app/features/pins/presentation/wrappers/pin_button_wrapper.dart';
+
 import '../controllers/notes_controller.dart';
 import '../di/notes_getters.dart';
 import '../widgets/edit_note_dialog_widget.dart';
@@ -22,6 +27,8 @@ final class NotesPage extends WatchingWidget {
   static const String _addLabel = 'Add';
   static const String _emptyText = 'No notes yet';
   static const String _deleteTooltip = 'Delete';
+  static const String _pinTooltip = 'Pin';
+  static const String _unpinTooltip = 'Unpin';
   static const EditNoteDialogTexts _editTexts = EditNoteDialogTexts(
     titleText: 'Edit note',
     cancelLabel: 'Cancel',
@@ -37,6 +44,7 @@ final class NotesPage extends WatchingWidget {
     registerHandler(target: notesController.addingStateController, handler: _onActionChanged);
     registerHandler(target: notesController.updatingStateController, handler: _onActionChanged);
     registerHandler(target: notesController.deletingStateController, handler: _onActionChanged);
+    registerHandler(target: notesController.pinningStateController, handler: _onPinningChanged);
 
     return Padding(
       padding: const EdgeInsets.all(AppTheme.spacingMedium),
@@ -53,6 +61,12 @@ final class NotesPage extends WatchingWidget {
           Expanded(
             child: NotesListWrapper(
               emptyText: _emptyText,
+              leadingBuilder: (String noteId) => PinButtonWrapper(
+                noteId: noteId,
+                pinTooltip: _pinTooltip,
+                unpinTooltip: _unpinTooltip,
+                onPressed: (String id) => _onPinPressed(notesController, id),
+              ),
               deleteTooltip: _deleteTooltip,
               onNoteTap: (Note note) => _onEditPressed(context, notesController, note),
               onDeletePressed: (String id) => _onDeletePressed(notesController, id),
@@ -69,6 +83,11 @@ final class NotesPage extends WatchingWidget {
 
   void _onActionChanged(BuildContext context, ResultState<void, NoteFailure> state, void Function() cancel) {
     if (state is! FailureResultState<void, NoteFailure>) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.failure.text)));
+  }
+
+  void _onPinningChanged(BuildContext context, ResultState<void, PinFailure> state, void Function() cancel) {
+    if (state is! FailureResultState<void, PinFailure>) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.failure.text)));
   }
 
@@ -110,5 +129,17 @@ final class NotesPage extends WatchingWidget {
     if (notesController.isDisposed) return;
 
     deletingStateController.value = ResultState.of(result);
+  }
+
+  /// Pins or unpins the note [noteId] with the pins feature's use case.
+  Future<void> _onPinPressed(NotesController notesController, String noteId) async {
+    final ValueNotifier<ResultState<void, PinFailure>> pinningStateController = notesController.pinningStateController;
+    if (pinningStateController.value.isLoading) return;
+    pinningStateController.value = ResultState.loading;
+
+    final Result<void, PinFailure> result = await togglePinUseCase(noteId);
+    if (notesController.isDisposed) return;
+
+    pinningStateController.value = ResultState.of(result);
   }
 }

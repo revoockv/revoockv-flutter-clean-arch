@@ -33,6 +33,7 @@ Quick answers; the file says the details. When in doubt, copy `rules/examples/au
 |---|---|---|
 | Name a use case | `<Action>UseCase` (`SignInUseCase`); live state `Watch<Name>UseCase` | `use_cases/use_case_naming.md` |
 | Expected failures | `Result<T, F>` with a failure enum of the feature, text in `presentation/l10n`; `on Exception catch` in the repository, no try/catch in use cases | `errors_models/result.md` |
+| Use another feature | through its domain and its UI parts, never its data; the arrows never close a circle (linter: `feature_dependencies`) | `structure/feature_dependencies.md` |
 | DTO ↔ entity | model in `data/models/` with `toEntity()` / `fromEntity()` | `errors_models/models_mapping.md` |
 | Data with known fields, a value per id, settings | an object (entity, model, small class), never a `Map`; raw maps only in models and data sources, local lookups, private caches | `errors_models/objects_not_maps.md` |
 | Ids of new records | UUID v4 in the data source | `errors_models/models_mapping.md` |

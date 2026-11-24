@@ -9,8 +9,12 @@ import 'package:example_app/features/notes/domain/use_cases/add_note_use_case.da
 import 'package:example_app/features/notes/domain/use_cases/delete_note_use_case.dart';
 import 'package:example_app/features/notes/domain/use_cases/update_note_use_case.dart';
 import 'package:example_app/features/notes/domain/use_cases/watch_notes_use_case.dart';
-import 'package:example_app/features/statistics/data/data_sources/database_statistics_data_source.dart';
-import 'package:example_app/features/statistics/data/data_sources/statistics_data_source.dart';
+import 'package:example_app/features/pins/data/data_sources/database_pins_data_source.dart';
+import 'package:example_app/features/pins/data/data_sources/pins_data_source.dart';
+import 'package:example_app/features/pins/data/repositories/pins_repository_impl.dart';
+import 'package:example_app/features/pins/domain/repositories/pins_repository.dart';
+import 'package:example_app/features/pins/domain/use_cases/toggle_pin_use_case.dart';
+import 'package:example_app/features/pins/domain/use_cases/watch_pinned_notes_use_case.dart';
 import 'package:example_app/features/statistics/data/repositories/statistics_repository_impl.dart';
 import 'package:example_app/features/statistics/domain/repositories/statistics_repository.dart';
 import 'package:example_app/features/statistics/domain/use_cases/watch_notes_statistics_use_case.dart';
@@ -18,15 +22,24 @@ import 'package:logger/logger.dart';
 import 'package:watch_it/watch_it.dart';
 
 /// Test DI of the app: the same registrations as `registerAndInit()`, with a silent logger, a database without
-/// latency, and [notes] / [statistics] instead of the real data sources when given.
+/// latency, and [notes] / [pins] instead of the real data sources when given.
 ///
 /// Keep it in sync with `lib/di.dart` and the features' `*_di.dart`.
-Future<void> registerAndInitForTest({NotesDataSource? notes, StatisticsDataSource? statistics}) async {
+Future<void> registerAndInitForTest({NotesDataSource? notes, PinsDataSource? pins}) async {
   await di.reset();
 
   // core
   di.registerSingleton<Logger>(Logger(level: Level.off));
   di.registerSingleton<AppDatabase>(InMemoryAppDatabase(latency: Duration.zero), dispose: disposeResource);
+
+  // pins — used by notes and statistics
+  di.registerSingleton<PinsDataSource>(pins ?? DatabasePinsDataSource(database: di<AppDatabase>()));
+  di.registerSingletonAsync<PinsRepository>(
+    () => PinsRepositoryImpl(dataSource: di<PinsDataSource>(), logger: di<Logger>()).init(),
+    dispose: disposeResource,
+  );
+  di.registerLazySingleton<WatchPinnedNotesUseCase>(() => WatchPinnedNotesUseCase(di<PinsRepository>()));
+  di.registerLazySingleton<TogglePinUseCase>(() => TogglePinUseCase(di<PinsRepository>()));
 
   // notes
   di.registerSingleton<NotesDataSource>(notes ?? DatabaseNotesDataSource(database: di<AppDatabase>()));
@@ -37,12 +50,12 @@ Future<void> registerAndInitForTest({NotesDataSource? notes, StatisticsDataSourc
   di.registerLazySingleton<WatchNotesUseCase>(() => WatchNotesUseCase(di<NotesRepository>()));
   di.registerLazySingleton<AddNoteUseCase>(() => AddNoteUseCase(di<NotesRepository>()));
   di.registerLazySingleton<UpdateNoteUseCase>(() => UpdateNoteUseCase(di<NotesRepository>()));
-  di.registerLazySingleton<DeleteNoteUseCase>(() => DeleteNoteUseCase(di<NotesRepository>()));
+  di.registerLazySingleton<DeleteNoteUseCase>(() => DeleteNoteUseCase(di<NotesRepository>(), di<PinsRepository>()));
 
   // statistics
-  di.registerSingleton<StatisticsDataSource>(statistics ?? DatabaseStatisticsDataSource(database: di<AppDatabase>()));
-  di.registerSingletonAsync<StatisticsRepository>(
-    () => StatisticsRepositoryImpl(dataSource: di<StatisticsDataSource>(), logger: di<Logger>()).init(),
+  di.registerSingletonWithDependencies<StatisticsRepository>(
+    () => StatisticsRepositoryImpl(notes: di<NotesRepository>(), pins: di<PinsRepository>(), logger: di<Logger>()).init(),
+    dependsOn: <Type>[NotesRepository, PinsRepository],
     dispose: disposeResource,
   );
   di.registerLazySingleton<WatchNotesStatisticsUseCase>(() => WatchNotesStatisticsUseCase(di<StatisticsRepository>()));

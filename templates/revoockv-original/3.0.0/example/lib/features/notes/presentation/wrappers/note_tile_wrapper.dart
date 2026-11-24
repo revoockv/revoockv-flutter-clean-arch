@@ -13,6 +13,9 @@ final class NoteTileWrapper extends WatchingWidget {
   /// Id of the note to show.
   final String noteId;
 
+  /// Shown before the text (the pin button of the pins feature).
+  final Widget leading;
+
   /// Tooltip of the delete button.
   final String deleteTooltip;
 
@@ -25,6 +28,7 @@ final class NoteTileWrapper extends WatchingWidget {
   /// Creates the wrapper.
   const NoteTileWrapper({
     required this.noteId,
+    required this.leading,
     required this.deleteTooltip,
     required this.onTap,
     required this.onDeletePressed,
@@ -37,6 +41,7 @@ final class NoteTileWrapper extends WatchingWidget {
     if (note == null) return const SizedBox.shrink();
     return NoteTileWidget(
       note: note,
+      leading: leading,
       deleteTooltip: deleteTooltip,
       onTap: onTap,
       onDeletePressed: onDeletePressed,

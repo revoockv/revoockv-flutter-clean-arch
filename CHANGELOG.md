@@ -24,6 +24,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   controllers, blocs, translations or other layers and reads no state) and `wrappers_no_actions` (a wrapper calls no
   action use case and no `context.read`), opt-in; `naming_file` / `naming_class` know `wrappers/`
   (`_wrapper.dart`, `Wrapper`).
+- Linter rule `feature_dependencies` (opt-in): a feature imports another only from its `domain/` and its UI parts
+  (widgets, wrappers, blocs, pages, l10n, getters), never its data, controllers or DI registration; an import that
+  closes a circle between features is reported.
+- The example app has a third feature, pins, that the notes and the statistics use (`docs/example_app.md`).
 
 ## [0.11.1] - 2026-11-23
 
