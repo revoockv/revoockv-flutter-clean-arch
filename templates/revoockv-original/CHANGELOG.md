@@ -14,6 +14,9 @@ Versions of this template. The skill itself has its own versions (`CHANGELOG.md`
   the public API of entities, use cases, repository interfaces, widgets and controllers (an object that answers by id
   or a `List` of entities); local lookups and private caches stay maps.
 - Lint: `objects_not_maps` is on (`[lint] on`).
+- Git (`rules/git/git_rules.md`): "Choose the type" — questions in order (the user's word, hotfix, fix, feature,
+  refactor, docs, test/style) and wrong → right examples, decided before the branch is created; a merge into
+  `develop` only after the user confirms the task is solved; corrections of a task stay on its branch.
 
 ## [2.0.0]
 

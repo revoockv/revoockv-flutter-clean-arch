@@ -40,7 +40,8 @@ Quick answers; the file says the details. When in doubt, copy `example/` and ren
 | Inject dependencies | private named parameters `({required this._watchNotesUseCase})` | `style/dart_style.md` |
 | Dartdoc, logging, imports | every public declaration documented; logger injected | `style/*.md` |
 | Tests | every layer; `blocTest` for blocs; pages under the real providers | `testing/testing.md` |
-| Commits and branches | `[TYPE-NNN] …`, `--no-ff` merges, branches kept | `git/git_rules.md` |
+| Commits and branches | `[TYPE-NNN] …`, `--no-ff` merges after the user confirms, branches kept | `git/git_rules.md` |
+| Choose `feature` / `fix` / `refactor` / `docs` | the questions of "Choose the type", in order, before the branch is created; the user's word wins | `git/git_rules.md` |
 
 ## Migrating from GetIt / watch_it / Provider / Riverpod
 
