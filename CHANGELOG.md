@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased]
+
+### Added
+- Linter rule `objects_not_maps` (opt-in through `[lint] on`): a record map (`Map<String, dynamic>`,
+  `Map<String, Object?>`, `Map<dynamic, dynamic>`) outside `data/models/` and `data/data_sources/`, and a `Map` in the public API of `domain/`
+  and `presentation/` (fields, getters, parameters and return types of public declarations; locals, private members
+  and private classes are left alone).
+- Templates revoockv-original 2.1.0 and revoockv-bloc 1.1.0: objects, not maps (`rules/errors_models/objects_not_maps.md`),
+  with the rule on.
+
 ## [0.11.1] - 2026-11-23
 
 ### Fixed

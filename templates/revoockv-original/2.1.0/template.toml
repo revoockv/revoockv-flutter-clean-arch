@@ -1,0 +1,116 @@
+# revoockv-original 2.1.0 — typed failures: Result<T, F>, the text of a failure is made in presentation; objects, not maps.
+# The agent reads this file first, then only the rule files the task needs.
+
+name = "revoockv-original"
+version = "2.1.0"
+description = "Clean architecture on GetIt + watch_it: ValueNotifier inside, ValueListenable outside, use cases for everything"
+author = "revoockv"
+
+[choices]
+# Short answers to "how is it done here?"; the rule files say the details.
+layers = ["data", "domain", "presentation"]
+core = "lib/core mirrors the feature layers: shared Result<T, F>, ResultState<T, F>, DisposableResource, the app database, theme, core DI, the home shell"
+app_state = "repositories: a private ValueNotifier, exposed only as ValueListenable"
+state_manager = "watch_it (watch, watchPropertyValue, registerHandler, createOnce) over ValueNotifier"
+rebuilds = "watch only what a widget shows, as low as possible; a part of a value through watchPropertyValue(…, target: …); fast state (ticks, positions, levels) only in the widget that draws it"
+widgets = "a widget lives in its feature; lib/core/presentation/widgets holds only plain-Flutter widgets several features use; leaf widgets are pure: data and callbacks, no watch"
+use_case_returns = ["Future<Result<T, F>> for actions (F — the failure type of the feature)", "ValueListenable<T> for live state (watch… use cases)"]
+streams = "only inside data sources; repositories turn them into ValueNotifier"
+di = "GetIt through watch_it's di: registerAndInit<Feature>() per feature, use case getters in <feature>_getters.dart"
+ui_state = "controllers like TextEditingController: UI state only, never call use cases; owner WatchingWidget calls them"
+set_state = false
+errors = "own sealed Result<T, F> (Result.ok, success, failure) and ResultState<T, F>; F is a failure enum (or sealed class with data) of the feature in domain/entities and presentation/l10n turns it into text, or core TextOnlyFailure in an app without translations; exceptions only in the logger"
+models = "DTO models in data/models with manual JSON and mapping to domain entities; data with a shape is an object, never a Map: raw maps only at the storage boundary (models, data sources), local lookups and private caches"
+ids = "UUID v4 created in the data source"
+tests = "every layer; a test DI per feature with fake data sources"
+git = "develop + <type>/<NNN>-<name> branches, [TYPE-NNN] commits, --no-ff merges, branches kept"
+
+[rules]
+# Topic → files (relative to this folder). Read only the topics of the task.
+workflow = ["rules/workflow.md"]
+decisions = ["rules/decisions.md"]
+structure = ["rules/structure/folder_structure.md"]
+state = [
+  "rules/state/reactive_state_syntax.md",
+  "rules/state/reactive_state_patterns.md",
+  "rules/state/controllers.md",
+  "rules/state/result_state.md",
+  "rules/state/widget_rules.md",
+  "rules/state/rebuilds.md",
+  "rules/state/widget_placement.md",
+]
+di = ["rules/di/di_patterns.md", "rules/di/di_conventions.md"]
+use_cases = ["rules/use_cases/use_case_naming.md"]
+errors_models = [
+  "rules/errors_models/result.md",
+  "rules/errors_models/models_mapping.md",
+  "rules/errors_models/objects_not_maps.md",
+]
+style = [
+  "rules/style/dart_style.md",
+  "rules/style/constants.md",
+  "rules/style/imports.md",
+  "rules/style/dartdoc_standard.md",
+  "rules/style/logging_conventions.md",
+]
+testing = ["rules/testing/testing.md"]
+git = ["rules/git/git_rules.md"]
+packages = ["rules/packages/packages.md"]
+example_feature = [
+  "rules/examples/auth_domain.md",
+  "rules/examples/auth_data.md",
+  "rules/examples/auth_presentation.md",
+]
+
+[structure]
+# Folders of every feature (and of lib/core); init_feature creates them.
+data = ["data_sources", "models", "repositories"]
+domain = ["entities", "repositories", "use_cases"]
+presentation = ["pages", "widgets", "di", "controllers", "l10n"]
+
+[scaffold]
+# Stub files live in scaffold/{app,feature,subfeature}/ ({{feature}}, {{Feature}} … filled in).
+next_step = "call registerAndInit{{Feature}}() from registerAndInit() in lib/di.dart"
+# Files `init_feature --core` copies from the example.
+core_files = [
+  "core/domain/entities/result.dart",
+  "core/domain/entities/disposable_resource.dart",
+  "core/domain/entities/result_state.dart",
+  "core/domain/entities/text_only_failure.dart",
+  "core/presentation/di/core_di.dart",
+  "core/presentation/theme.dart",
+]
+
+[example]
+# The project built with every rule of this template; selfcheck verifies it.
+path = "example"
+package = "example_app"
+# Docs import `package:<docs_package>/…`; selfcheck compiles their code inside the example.
+docs_package = "your_app"
+# Doc code blocks under these paths are compiled; those under `same_as_example` must equal the example's files.
+doc_paths = ["lib/core/", "lib/features/auth/"]
+same_as_example = ["lib/core/"]
+# The doc-only feature compiled in the example and linted on its own.
+doc_feature = "lib/features/auth"
+
+[packages]
+# Packages check_versions.py compares with pub.dev.
+tracked = ["get_it", "watch_it", "logger", "uuid", "flutter_lints"]
+
+[lint]
+# Rules this template turns off (none: all 33 apply).
+off = []
+# Opt-in rules this template turns on.
+on = ["watch_select", "core_widgets_pure", "objects_not_maps"]
+# Rules reported as warnings: shown, but `--strict` does not fail on them.
+warn = []
+
+[lint.params]
+# Numbers allowed outside `static const`.
+allowed_numbers = [-1, 0, 1, 2]
+# Shared values (spacing, sizes, colors) of every feature, relative to lib/.
+theme_file = "core/presentation/theme.dart"
+# Words of a private constant that make it a spacing value AppTheme may already have.
+layout_name_words = ["padding", "spacing", "gap", "margin", "inset"]
+# Folders (relative to lib/) of the widgets several features use: core_widgets_pure keeps them plain Flutter.
+core_widget_dirs = ["core/presentation/widgets"]

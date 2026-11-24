@@ -1046,6 +1046,79 @@ class CoreWidgetsPureTest(unittest.TestCase):
         self.assertEqual(run({WIDGETS + "list_widget.dart": code}, self.RULES), [])
 
 
+class ObjectsNotMapsTest(unittest.TestCase):
+    RULES = {"objects_not_maps"}
+
+    def lines(self, rel: str, code: str) -> list[int]:
+        return [line for _, _, line in run({rel: code}, self.RULES)]
+
+    def test_record_maps_live_only_in_models(self):
+        code = """
+            final class NoteModel {
+              factory NoteModel.fromJson(Map<String, dynamic> json) => NoteModel();
+              Map<String, dynamic> toJson() => <String, dynamic>{};
+            }
+        """
+        self.assertEqual(self.lines("features/notes/data/models/note_model.dart", code), [])
+        source = """
+            final class DatabaseNotesDataSource {
+              static List<NoteModel> _toModels(List<Map<String, Object?>> rows) => rows.map(NoteModel.fromRow).toList();
+            }
+        """
+        self.assertEqual(self.lines("features/notes/data/data_sources/database_notes_data_source.dart", source), [])
+        repository = """
+            final class NotesRepositoryImpl {
+              Future<void> save(Map<String, dynamic> note) async {}
+              Note read(Object? value) => _fromMap(value as Map<dynamic, dynamic>);
+            }
+        """
+        self.assertEqual(self.lines("features/notes/data/repositories/notes_repository_impl.dart", repository), [3, 4])
+
+    def test_maps_in_the_public_api_are_violations(self):
+        entity = """
+            final class Stats {
+              final Map<String, int> countsById;
+              Map<DateTime, int> get days => const {};
+              int countOf(Map<String, int> counts) => 0;
+              const Stats({required this.countsById});
+            }
+        """
+        self.assertEqual(self.lines("features/notes/domain/entities/stats.dart", entity), [3, 4, 5])
+        widget = """
+            final class NotesWidget extends StatelessWidget {
+              final ValueNotifier<Map<String, bool>> openController;
+              const NotesWidget({required this.openController, required Map<String, int> counts});
+            }
+        """
+        self.assertEqual(self.lines("features/notes/presentation/widgets/notes_widget.dart", widget), [3, 4])
+
+    def test_locals_private_members_and_private_classes_are_fine(self):
+        code = """
+            final class CoverCounts {
+              final Map<String, int> _bySongId;
+              CoverCounts(List<int> ids) : _bySongId = <String, int>{};
+              int of(String id) {
+                final Map<String, int> local = <String, int>{};
+                return local[id] ?? _bySongId[id] ?? 0;
+              }
+              static Map<String, int> _index(List<int> ids) => <String, int>{};
+              void each(void Function(int) f) {
+                ids.forEach((int id) {
+                  final Map<int, int> inClosure = <int, int>{};
+                });
+              }
+            }
+
+            final class _Tally {
+              final Map<String, int> bySong = <String, int>{};
+            }
+        """
+        self.assertEqual(self.lines("features/notes/domain/entities/cover_counts.dart", code), [])
+
+    def test_off_unless_the_template_turns_it_on(self):
+        self.assertIn("objects_not_maps", linter.OPT_IN_RULES)
+
+
 class FalsePositivesTest(unittest.TestCase):
     def test_closure_forwarding_an_enum_value_is_allowed(self):
         code = """
