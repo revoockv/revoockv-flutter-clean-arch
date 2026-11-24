@@ -14,7 +14,12 @@ Versions of this template. The skill itself has its own versions (`CHANGELOG.md`
   `TextOnlyFailure` in an app without translations. Repositories and use cases return failures, not texts; blocs and
   cubits keep the failure in their state (`NotesLoadFailed(failure)`, `NoteActionsFailed(failure)`); the text is chosen
   in the new `presentation/l10n` folder (`note_failure_text.dart`), so a new failure without a text does not compile.
-- `[structure]`: `presentation/l10n`.
+- `[structure]`: `presentation/l10n`, `presentation/wrappers`.
+- Pages, wrappers and dumb widgets (`rules/state/wrappers.md`), as in revoockv-original 3.0.0: the page creates the
+  blocs, passes their methods down as callbacks and reacts with `BlocListener`; a wrapper selects with `BlocSelector` /
+  `context.select` exactly what one dumb widget shows and starts nothing; widgets in `widgets/` are dumb — the same
+  files as in revoockv-original 3.0.0. An edited note rebuilds one tile (`example/test/rebuilds_test.dart`).
+- Lint: `widgets_dumb` and `wrappers_no_actions` on.
 
 ## [1.1.0]
 

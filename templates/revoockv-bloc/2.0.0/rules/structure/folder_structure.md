@@ -25,8 +25,9 @@ lib/
       repositories/         interfaces
       use_cases/            <Action>UseCase, Watch<Name>UseCase
     presentation/
-      pages/                *_page.dart — creates the blocs (BlocProvider) from the use cases in the tree
-      widgets/              *_widget.dart
+      pages/                *_page.dart — creates the blocs (BlocProvider) from the use cases in the tree, never rebuilds
+      wrappers/             *_wrapper.dart — select state for one dumb widget (rules/state/wrappers.md)
+      widgets/              *_widget.dart — dumb: data, texts and callbacks
       blocs/                <name>_bloc.dart + _event.dart + _state.dart; <name>_cubit.dart + _state.dart
       di/                   <feature>_di.dart — <Feature>ProvidersWidget
 ```

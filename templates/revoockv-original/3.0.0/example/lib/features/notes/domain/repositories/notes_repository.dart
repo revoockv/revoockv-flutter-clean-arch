@@ -1,0 +1,21 @@
+import 'package:example_app/core/domain/entities/result_state.dart';
+import 'package:example_app/core/domain/entities/result.dart';
+import 'package:flutter/foundation.dart' show ValueListenable;
+
+import '../entities/note.dart';
+import '../entities/note_failure.dart';
+
+/// Source of truth for notes.
+abstract interface class NotesRepository {
+  /// Live list of notes, newest first — loading, the notes, or the load failure; always the same instance.
+  ValueListenable<ResultState<List<Note>, NoteFailure>> watchNotes();
+
+  /// Adds a note with [text].
+  Future<Result<void, NoteFailure>> addNote(String text);
+
+  /// Replaces the text of the note with [id].
+  Future<Result<void, NoteFailure>> updateNote(String id, String text);
+
+  /// Deletes the note with [id].
+  Future<Result<void, NoteFailure>> deleteNote(String id);
+}

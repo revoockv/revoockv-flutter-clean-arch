@@ -1,4 +1,3 @@
-import 'package:example_app/core/presentation/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -6,10 +5,8 @@ import '../../domain/entities/notes_statistics.dart';
 import '../../domain/use_cases/watch_notes_statistics_use_case.dart';
 import '../blocs/statistics_bloc.dart';
 import '../blocs/statistics_event.dart';
-import '../blocs/statistics_state.dart';
-import '../widgets/statistic_tile_widget.dart';
-import '../l10n/statistics_failure_text.dart';
-import '../../domain/entities/statistics_failure.dart';
+import '../wrappers/statistic_tile_wrapper.dart';
+import '../wrappers/statistics_list_wrapper.dart';
 
 /// Statistics tab: creates its bloc from the feature's use case and shows the live numbers.
 final class StatisticsPage extends StatelessWidget {
@@ -26,7 +23,7 @@ final class StatisticsPage extends StatelessWidget {
         ..add(const StatisticsSubscribed());
 }
 
-/// The numbers, or a progress indicator, or the load error.
+/// The numbers: holds the labels; never rebuilds itself — every tile's wrapper selects its own number.
 final class _StatisticsViewWidget extends StatelessWidget {
   static const String _notesLabel = 'Notes';
   static const String _wordsLabel = 'Words';
@@ -37,19 +34,21 @@ final class _StatisticsViewWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final StatisticsState state = context.watch<StatisticsBloc>().state;
-    return switch (state) {
-      StatisticsLoading() => const Center(child: CircularProgressIndicator()),
-      StatisticsLoadFailed(:final StatisticsFailure failure) => Center(child: Text(failure.text)),
-      StatisticsLoaded(:final NotesStatistics statistics) => ListView(
-          padding: const EdgeInsets.all(AppTheme.spacingMedium),
-          children: <Widget>[
-            StatisticTileWidget(label: _notesLabel, value: statistics.notes),
-            StatisticTileWidget(label: _wordsLabel, value: statistics.words),
-            StatisticTileWidget(label: _addedTodayLabel, value: statistics.addedToday),
-            StatisticTileWidget(label: _editedLabel, value: statistics.edited),
-          ],
-        ),
-    };
+    return const StatisticsListWrapper(
+      tiles: <Widget>[
+        StatisticTileWrapper(label: _notesLabel, countOf: _notesOf),
+        StatisticTileWrapper(label: _wordsLabel, countOf: _wordsOf),
+        StatisticTileWrapper(label: _addedTodayLabel, countOf: _addedTodayOf),
+        StatisticTileWrapper(label: _editedLabel, countOf: _editedOf),
+      ],
+    );
   }
+
+  static int _notesOf(NotesStatistics statistics) => statistics.notes;
+
+  static int _wordsOf(NotesStatistics statistics) => statistics.words;
+
+  static int _addedTodayOf(NotesStatistics statistics) => statistics.addedToday;
+
+  static int _editedOf(NotesStatistics statistics) => statistics.edited;
 }

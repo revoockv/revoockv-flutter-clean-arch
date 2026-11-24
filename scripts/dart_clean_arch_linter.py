@@ -103,11 +103,13 @@ ALL_RULES = {
     "watch_select",
     "core_widgets_pure",
     "objects_not_maps",
+    "widgets_dumb",
+    "wrappers_no_actions",
 }
 
 # Rules a template turns on itself (`[lint] on`): with all rules they run only when listed there, so the templates
 # made before them keep passing.
-OPT_IN_RULES = {"watch_select", "core_widgets_pure", "objects_not_maps"}
+OPT_IN_RULES = {"watch_select", "core_widgets_pure", "objects_not_maps", "widgets_dumb", "wrappers_no_actions"}
 
 # Folders (relative to lib/) of the widgets shared by features (the template's [lint.params] core_widget_dirs)
 CORE_WIDGET_DIRS: tuple[str, ...] = ()
@@ -409,6 +411,13 @@ def check_naming_file(result: AnalysisResult) -> None:
             message=f"Widget file '{basename}' must end with _widget.dart",
         ))
 
+    # Wrapper files
+    if "wrappers/" in fp and not basename.endswith("_wrapper.dart"):
+        result.violations.append(Violation(
+            file=fp, line=0, rule="naming_file",
+            message=f"Wrapper file '{basename}' must end with _wrapper.dart",
+        ))
+
     # Page files
     if "pages/" in fp and not basename.endswith("_page.dart"):
         result.violations.append(Violation(
@@ -455,7 +464,14 @@ def check_naming_class(result: AnalysisResult) -> None:
            re.search(r'\bextends\s+StatefulWidget', line) or \
            re.search(r'\bextends\s+WatchingWidget', line) or \
            re.search(r'\bextends\s+WatchingStatefulWidget', line):
-            if not class_name.endswith("Widget") and not class_name.endswith("Page"):
+            in_wrappers = "/wrappers/" in result.file.replace(os.sep, "/")
+            if in_wrappers and not class_name.endswith("Wrapper"):
+                result.violations.append(Violation(
+                    file=result.file, line=i, rule="naming_class",
+                    message=f"Wrapper class '{class_name}' must end with Wrapper suffix",
+                    snippet=_line_at(content, i),
+                ))
+            elif not in_wrappers and not class_name.endswith("Widget") and not class_name.endswith("Page"):
                 result.violations.append(Violation(
                     file=result.file, line=i, rule="naming_class",
                     message=f"Widget class '{class_name}' must end with Widget suffix",
@@ -2620,6 +2636,80 @@ def check_objects_not_maps(result: AnalysisResult) -> None:
         i += 1
 
 
+# ── widgets_dumb / wrappers_no_actions ──────────────────────────────
+
+# What a dumb widget of a feature must not import: app state, DI, translations, the smart parts and other layers.
+_DUMB_WIDGET_FORBIDDEN = re.compile(
+    r"package:(?:watch_it|get_it|flutter_bloc|bloc|provider|riverpod|flutter_riverpod)/"
+    r"|['/](?:data|di|l10n|controllers|blocs|pages|wrappers|repositories|use_cases)/|_getters\.dart"
+)
+_STATE_READ = re.compile(r'\bcontext\.(?:read|watch|select)\s*<|\b(?:watch|watchValue|watchPropertyValue|watchIt|'
+                         r'registerHandler|createOnce|callOnce)\s*[<(]')
+_ACTION_USE_CASE_CALL = re.compile(r'\b(?!watch)[a-z]\w*UseCase\s*\(')
+_CONTEXT_READ = re.compile(r'\bcontext\.read\s*<')
+
+
+def _in_presentation_folder(file_path: str, folder: str) -> bool:
+    return f'/presentation/{folder}/' in file_path.replace(os.sep, '/')
+
+
+def check_widgets_dumb(result: AnalysisResult) -> None:
+    """The widgets of a feature (`presentation/widgets/`) are dumb: data and callbacks in, nothing of the app's state.
+
+    No state manager, DI, getters, use cases, controllers, blocs, translations, wrappers or other layers; no watching
+    and no reading of state from the context. The page and the wrappers do that and pass the values.
+    """
+    if not _in_presentation_folder(result.file, 'widgets'):
+        return
+    content = _read_file(Path(result.file))
+    for i, line in enumerate(content.splitlines(), 1):
+        stripped = line.strip()
+        if stripped.startswith(("import ", "export ")) and _DUMB_WIDGET_FORBIDDEN.search(stripped):
+            result.violations.append(Violation(
+                file=result.file, line=i, rule="widgets_dumb",
+                message="A widget takes data and callbacks: the state, use cases, translations and other layers stay "
+                        "in the page and the wrappers",
+                snippet=_line_at(content, i),
+            ))
+    code, _ = _scan_dart(content)
+    for m in _STATE_READ.finditer(code):
+        i = code.count("\n", 0, m.start()) + 1
+        result.violations.append(Violation(
+            file=result.file, line=i, rule="widgets_dumb",
+            message="A widget reads no state: a wrapper selects the value and passes it",
+            snippet=_line_at(content, i),
+        ))
+    for name, base, _, offset, _ in _widget_classes(code):
+        if base in ("WatchingWidget", "WatchingStatefulWidget"):
+            i = code.count("\n", 0, offset) + 1
+            result.violations.append(Violation(
+                file=result.file, line=i, rule="widgets_dumb",
+                message=f"{name}: a widget watches nothing — make it a StatelessWidget and give it a wrapper",
+                snippet=_line_at(content, i),
+            ))
+
+
+def check_wrappers_no_actions(result: AnalysisResult) -> None:
+    """A wrapper (`presentation/wrappers/`) selects state for one widget and starts nothing.
+
+    Watch use cases are fine (`watchNotesUseCase()`); an action use case or `context.read<…>()` (a cubit's method)
+    belongs to the page, which passes it down as a callback.
+    """
+    if not _in_presentation_folder(result.file, 'wrappers'):
+        return
+    content = _read_file(Path(result.file))
+    code, _ = _scan_dart(content)
+    for pattern, message in (
+        (_ACTION_USE_CASE_CALL, "A wrapper calls no action use case: the page does and passes a callback"),
+        (_CONTEXT_READ, "A wrapper starts nothing with context.read: the page passes the cubit's method as a callback"),
+    ):
+        for m in pattern.finditer(code):
+            i = code.count("\n", 0, m.start()) + 1
+            result.violations.append(Violation(
+                file=result.file, line=i, rule="wrappers_no_actions", message=message, snippet=_line_at(content, i),
+            ))
+
+
 # ── Main ────────────────────────────────────────────────────────────
 
 CHECKERS = {
@@ -2656,6 +2746,8 @@ CHECKERS = {
     "watch_select": check_watch_select,
     "core_widgets_pure": check_core_widgets_pure,
     "objects_not_maps": check_objects_not_maps,
+    "widgets_dumb": check_widgets_dumb,
+    "wrappers_no_actions": check_wrappers_no_actions,
 }
 def _collect_dart_files(path: str) -> list[Path]:
     """Collect all .dart files under the given path."""
