@@ -2,6 +2,19 @@
 
 Versions of this template. The skill itself has its own versions (`CHANGELOG.md` in the skill root).
 
+## [1.1.0]
+
+- Made from revoockv-bloc@1.0.0.
+
+## [1.1.0]
+
+- Made from revoockv-bloc@1.0.0.
+- Objects, not maps (`rules/errors_models/objects_not_maps.md`, `decisions.md`, `[choices] models`): data with a shape
+  is a class; `Map<String, dynamic>` only at the storage boundary (models in `data/models/`, data sources); no `Map` in
+  the public API of entities, use cases, repository interfaces, widgets and blocs (an object that answers by id
+  or a `List` of entities); local lookups and private caches stay maps.
+- Lint: `objects_not_maps` is on (`[lint] on`).
+
 ## [1.0.0] - 2026-11-12
 
 - Made with the constructor from revoockv-original@1.0.0: the same layers, `Result`, models, style, tests and git

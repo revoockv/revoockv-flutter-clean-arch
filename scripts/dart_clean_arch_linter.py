@@ -102,11 +102,12 @@ ALL_RULES = {
     "controller_no_actions",
     "watch_select",
     "core_widgets_pure",
+    "objects_not_maps",
 }
 
 # Rules a template turns on itself (`[lint] on`): with all rules they run only when listed there, so the templates
 # made before them keep passing.
-OPT_IN_RULES = {"watch_select", "core_widgets_pure"}
+OPT_IN_RULES = {"watch_select", "core_widgets_pure", "objects_not_maps"}
 
 # Folders (relative to lib/) of the widgets shared by features (the template's [lint.params] core_widget_dirs)
 CORE_WIDGET_DIRS: tuple[str, ...] = ()
@@ -2501,6 +2502,124 @@ def check_core_widgets_pure(result: AnalysisResult) -> None:
             ))
 
 
+# ── objects_not_maps ────────────────────────────────────────────────
+
+_RECORD_MAP = re.compile(r'\bMap<\s*(?:String|dynamic)\s*,\s*(?:dynamic|Object\??)\s*>')
+_ANY_MAP = re.compile(r'\bMap<')
+_TYPE_DECL = re.compile(r'\b(?:class|mixin|enum|extension)\s+(\w+)?')
+_IDENT = re.compile(r'[A-Za-z_$][\w$]*')
+
+
+def _skip_generic(code: str, start: int) -> int:
+    """Index just after the `<…>` that opens at [start]."""
+    depth = 0
+    for k in range(start, len(code)):
+        if code[k] == '<':
+            depth += 1
+        elif code[k] == '>':
+            depth -= 1
+            if depth == 0:
+                return k + 1
+    return len(code)
+
+
+def _declared_name(code: str, after_type: int) -> str:
+    """The name that follows a type ending at [after_type] (`Map<…>? name`, `Map<…>> name`, `Map<…> get name`)."""
+    k = after_type
+    while k < len(code) and code[k] in '>?, \t\n':
+        if code[k] == ',':
+            return ''
+        k += 1
+    m = _IDENT.match(code, k)
+    if not m:
+        return ''
+    name = m.group(0)
+    if name == 'get':
+        k = m.end()
+        while k < len(code) and code[k] in ' \t\n':
+            k += 1
+        m = _IDENT.match(code, k)
+        return m.group(0) if m else ''
+    return name
+
+
+def _callable_name(code: str, open_paren: int) -> str:
+    """The name right before the parenthesis at [open_paren] (`_helper(`, `Foo._(`, `Widget(`)."""
+    k = open_paren - 1
+    while k >= 0 and code[k] in ' \t\n':
+        k -= 1
+    end = k + 1
+    while k >= 0 and (code[k].isalnum() or code[k] in '_$'):
+        k -= 1
+    return code[k + 1:end]
+
+
+def check_objects_not_maps(result: AnalysisResult) -> None:
+    """Data with a shape is an object: record maps stay at the storage boundary (data/models, data/data_sources), and
+    the API of domain/presentation has no Map."""
+    path = result.file.replace(os.sep, '/')
+    if '/data/models/' in path or '/data/data_sources/' in path:
+        return
+    content = _read_file(Path(result.file))
+    code, _ = _scan_dart(content)
+
+    def report(offset: int, message: str) -> None:
+        line = code.count('\n', 0, offset) + 1
+        result.violations.append(Violation(
+            file=result.file, line=line, rule="objects_not_maps", message=message, snippet=_line_at(content, line),
+        ))
+
+    for m in _RECORD_MAP.finditer(code):
+        report(m.start(), f"'{m.group(0)}' is a record without a type: give it a class (a model in data/models "
+                          "reads and writes the raw map; a data source hands it over)")
+
+    if not (_is_domain_file(path) or _is_presentation_file(path)):
+        return
+    # Walk the brackets: a Map is part of the API when no function body is open around it.
+    stack: list[tuple[str, str]] = []  # (bracket, kind) — kind: 'class:<name>', 'body', 'paren', 'other'
+    pending_class: str | None = None
+    record_starts = {m.start() for m in _RECORD_MAP.finditer(code)}
+    i = 0
+    n = len(code)
+    while i < n:
+        c = code[i]
+        decl = _TYPE_DECL.match(code, i) if (c.isalpha() and (i == 0 or not (code[i - 1].isalnum() or code[i - 1] == '_'))) else None
+        if decl:
+            pending_class = decl.group(1) or ''
+            i = decl.end()
+            continue
+        if c == ';':
+            pending_class = None
+        elif c == '(':
+            stack.append(('(', 'paren:' + _callable_name(code, i)))
+        elif c == '[':
+            stack.append(('[', 'other'))
+        elif c == '{':
+            if pending_class is not None:
+                stack.append(('{', 'class:' + pending_class))
+                pending_class = None
+            elif stack and stack[-1][0] == '(':
+                stack.append(('{', 'other'))  # named parameters, a literal
+            else:
+                stack.append(('{', 'body'))
+        elif c in ')]}':
+            if stack:
+                stack.pop()
+        elif c == 'M' and _ANY_MAP.match(code, i) and (i == 0 or not (code[i - 1].isalnum() or code[i - 1] == '_')):
+            kinds = [kind for _, kind in stack]
+            in_body = 'body' in kinds
+            classes = [k[6:] for k in kinds if k.startswith('class:')]
+            if not in_body and i not in record_starts and not any(name.startswith('_') for name in classes):
+                parens = [k[6:] for k in kinds if k.startswith('paren:')]
+                owner = parens[-1] if parens else _declared_name(code, _skip_generic(code, i + 3))
+                if owner and not owner.startswith('_'):
+                    report(i, f"'Map' in the API of '{owner}': wrap it in an object that answers the question "
+                              "(or a List of entities); a Map stays a local lookup or a private field")
+            i = _skip_generic(code, i + 3)
+            continue
+        i += 1
+
+
 # ── Main ────────────────────────────────────────────────────────────
 
 CHECKERS = {
@@ -2536,6 +2655,7 @@ CHECKERS = {
     "controller_no_actions": check_controller_no_actions,
     "watch_select": check_watch_select,
     "core_widgets_pure": check_core_widgets_pure,
+    "objects_not_maps": check_objects_not_maps,
 }
 def _collect_dart_files(path: str) -> list[Path]:
     """Collect all .dart files under the given path."""
