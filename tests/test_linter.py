@@ -1119,6 +1119,98 @@ class ObjectsNotMapsTest(unittest.TestCase):
         self.assertIn("objects_not_maps", linter.OPT_IN_RULES)
 
 
+class DumbWidgetsAndWrappersTest(unittest.TestCase):
+    RULES = {"widgets_dumb", "wrappers_no_actions", "naming_file", "naming_class"}
+
+    def lines(self, rel: str, code: str) -> list[tuple[str, int]]:
+        return [(rule, line) for _, rule, line in run({rel: code}, self.RULES)]
+
+    def test_a_dumb_widget_is_valid(self):
+        code = """
+            import 'package:flutter/material.dart';
+            import '../../domain/entities/note.dart';
+
+            final class NoteTileWidget extends StatelessWidget {
+              final Note note;
+              final VoidCallback onTap;
+              const NoteTileWidget({required this.note, required this.onTap, super.key});
+              @override
+              Widget build(BuildContext context) => ListTile(title: Text(note.text), onTap: onTap);
+            }
+        """
+        self.assertEqual(self.lines("features/notes/presentation/widgets/note_tile_widget.dart", code), [])
+
+    def test_state_in_a_widget_is_a_violation(self):
+        code = """
+            import 'package:watch_it/watch_it.dart';
+            import '../di/notes_getters.dart';
+            import '../l10n/note_failure_text.dart';
+
+            final class NotesListWidget extends WatchingWidget {
+              @override
+              Widget build(BuildContext context) {
+                final notes = watch(watchNotesUseCase()).value;
+                return const SizedBox();
+              }
+            }
+        """
+        found = self.lines("features/notes/presentation/widgets/notes_list_widget.dart", code)
+        self.assertEqual(sorted(line for rule, line in found if rule == "widgets_dumb"), [2, 3, 4, 6, 9])
+
+    def test_a_bloc_read_in_a_widget_is_a_violation(self):
+        code = """
+            import 'package:flutter/material.dart';
+
+            final class AddButtonWidget extends StatelessWidget {
+              @override
+              Widget build(BuildContext context) {
+                final bool isRunning = context.select<NoteActionsCubit, bool>(_isRunning);
+                return const SizedBox();
+              }
+            }
+        """
+        self.assertEqual(self.lines("features/notes/presentation/widgets/add_button_widget.dart", code),
+                         [("widgets_dumb", 7)])
+
+    def test_a_wrapper_selects_and_starts_nothing(self):
+        good = """
+            final class NoteTileWrapper extends WatchingWidget {
+              @override
+              Widget build(BuildContext context) {
+                final Note? note = watchPropertyValue(_noteOf, target: watchNotesUseCase());
+                return const SizedBox();
+              }
+            }
+        """
+        self.assertEqual(self.lines("features/notes/presentation/wrappers/note_tile_wrapper.dart", good), [])
+        bad = """
+            final class AddNoteWrapper extends StatelessWidget {
+              @override
+              Widget build(BuildContext context) {
+                addNoteUseCase('x');
+                context.read<NoteActionsCubit>().add('x');
+                return const SizedBox();
+              }
+            }
+        """
+        self.assertEqual(self.lines("features/notes/presentation/wrappers/add_note_wrapper.dart", bad),
+                         [("wrappers_no_actions", 5), ("wrappers_no_actions", 6)])
+
+    def test_wrapper_names(self):
+        code = """
+            final class NoteTile extends StatelessWidget {
+              @override
+              Widget build(BuildContext context) => const SizedBox();
+            }
+        """
+        found = self.lines("features/notes/presentation/wrappers/note_tile.dart", code)
+        self.assertIn(("naming_file", 0), found)
+        self.assertIn(("naming_class", 2), found)
+
+    def test_off_unless_the_template_turns_them_on(self):
+        self.assertTrue({"widgets_dumb", "wrappers_no_actions"} <= linter.OPT_IN_RULES)
+
+
 class FalsePositivesTest(unittest.TestCase):
     def test_closure_forwarding_an_enum_value_is_allowed(self):
         code = """

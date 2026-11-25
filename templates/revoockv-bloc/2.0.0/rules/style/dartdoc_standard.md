@@ -13,7 +13,7 @@ Add Dartdoc (`///`) for every **public** declaration (linter: `dartdoc_public`):
 Not needed (the linter skips them):
 - `@override` members — they inherit the documentation of the interface
 - framework members: `build`, `initState`, `dispose` of a `State`, `createState`, `didUpdateWidget`, …, and `main`
-- private names and the members of private classes (`_AddButtonWidget`)
+- private names and the members of private classes (`_NotesListContent`)
 - the unnamed constructor of a `sealed` class — it cannot be called outside its library
 
 An annotation may stand between the comment and the declaration:

@@ -9,7 +9,10 @@ Quick answers; the file says the details. When in doubt, copy `example/` and ren
 | Live data on a screen | a Bloc: `on<XSubscribed>` + `emit.forEach(watchXUseCase(), onData: _toState)` | `state/blocs.md` |
 | An action with progress / error | a Cubit method: skip while running, `emit(Running)`, `await` the use case, `isClosed`, `emit(Done / Failed)` | `state/blocs.md` |
 | Show the state | `context.watch<XBloc>().state` + `switch` over the sealed state | `state/blocs.md` |
-| Rebuild for one field | `context.select<XCubit, T>(_selector)` in the lowest widget | `state/blocs.md` |
+| Rebuild for one field | a wrapper per part that changes on its own: `BlocSelector` / `context.select` | `state/wrappers.md` |
+| Widgets in `widgets/` | dumb: data, texts and callbacks; no `context.read/watch/select`, blocs or translations (linter: `widgets_dumb`) | `state/wrappers.md` |
+| Need a wrapper? | yes when a selection updates exactly that part; `<Thing>Wrapper` in `wrappers/`, starts nothing (linter: `wrappers_no_actions`) | `state/wrappers.md` |
+| Parameter names of a widget | as in Flutter: `hintText`, `addLabel`, `isAdding`, `onTap`, `onAddPressed` | `state/wrappers.md` |
 | Snackbar, navigation, clear a field | `BlocListener(listenWhen: _isX, listener: _onX)` | `state/blocs.md` |
 | Send an action | `context.read<XCubit>().doIt(…)` in a private method | `state/blocs.md` |
 | Text being typed | `TextEditingController` in a `StatefulWidget` (`initState` / `dispose`) | `state/widget_rules.md` |
@@ -47,6 +50,6 @@ Quick answers; the file says the details. When in doubt, copy `example/` and ren
 
 1. Keep data sources and models; repositories return `Stream<Result<T, F>>` instead of a `ValueListenable` or a provider.
 2. Registrations → `RepositoryProvider`s of `<Feature>ProvidersWidget`; `di<T>()` / `ref.read` → `context.read<T>()`.
-3. Screen state (notifiers, `ResultState`, providers) → a Bloc or Cubit; widgets watch, select and listen.
+3. Screen state (notifiers, `ResultState`, providers) → a Bloc or Cubit; wrappers select, pages listen, widgets stay dumb.
 4. UI controllers that called nothing stay Flutter controllers in a `StatefulWidget`; the rest becomes a Cubit.
 5. Run the linter.

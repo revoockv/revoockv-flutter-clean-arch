@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 /// One number with its label.
+///
+/// Dumb: the label and the number come from above.
 final class StatisticTileWidget extends StatelessWidget {
   /// What the number counts.
   final String label;

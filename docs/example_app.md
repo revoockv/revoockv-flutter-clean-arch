@@ -39,7 +39,16 @@ import each other:
 - domain: `AddNoteUseCase` / `UpdateNoteUseCase` validation with a fake repository; `NotesStatistics.of` counts;
 - data: `InMemoryAppDatabase` (emits, unknown id throws); notes repository (stream, failures); statistics repository;
 - presentation: the template's state holders (controllers or blocs); the notes page flow (add, edit, delete, blank,
-  failed add, load error); the statistics page; switching tabs.
+  failed add, load error); the statistics page; switching tabs;
+- rebuilds (`test/rebuilds_test.dart`, `debugOnRebuildDirtyWidget`): an edited note rebuilds one `NoteTileWidget` and
+  no `NotesListWidget`; a new note rebuilds the list; a changed number rebuilds only its `StatisticTileWidget`.
+
+## Screens are built the same way (every template)
+
+Pages start the actions and react; wrappers select from the state exactly what one dumb widget shows; the dumb
+widgets (`presentation/widgets/`) are **the same files in every template** — only pages and wrappers differ:
+`AddNoteWrapper` (adding or not), `NotesListWrapper` (the ids), `NoteTileWrapper` (one note by id),
+`StatisticsListWrapper` (loading or failed), `StatisticTileWrapper` (one number).
 
 Texts used by the tests: `Notes`, `Statistics`, `Add`, `New note`, `No notes yet`, `Delete`, `Edit note`, `Save`,
 `Cancel`, `Note text must not be empty`, `Could not add the note`, `Could not load the notes`, `Could not load the

@@ -1,33 +1,45 @@
 import 'package:flutter/material.dart';
 
-/// "Edit note" dialog: a field with the note's text, Cancel and Save. Returns the new text, or `null` when cancelled.
+/// The texts of [EditNoteDialogWidget].
+final class EditNoteDialogTexts {
+  /// Title of the dialog.
+  final String titleText;
+
+  /// Label of the cancel button.
+  final String cancelLabel;
+
+  /// Label of the save button.
+  final String saveLabel;
+
+  /// Creates the texts.
+  const EditNoteDialogTexts({required this.titleText, required this.cancelLabel, required this.saveLabel});
+}
+
+/// A dialog with the note's text, Cancel and Save; returns the new text, or `null` when cancelled.
 ///
-/// Owns its field's controller; knows no blocs — the caller saves the text.
+/// Dumb: it owns only its field's controller (plain Flutter) and knows no use cases — whoever shows it saves the text.
 final class EditNoteDialogWidget extends StatefulWidget {
   /// The text the field starts with.
   final String initialText;
 
-  /// Creates the dialog.
-  const EditNoteDialogWidget({required this.initialText, super.key});
+  /// The title and the button labels.
+  final EditNoteDialogTexts texts;
 
-  /// Shows the dialog over [context] with [initialText]; completes with the new text or `null`.
-  static Future<String?> show(BuildContext context, String initialText) =>
-      showDialog<String>(context: context, builder: (BuildContext context) => EditNoteDialogWidget(initialText: initialText));
+  /// Creates the dialog.
+  const EditNoteDialogWidget({required this.initialText, required this.texts, super.key});
+
+  /// Shows the dialog over [context]; completes with the new text or `null`.
+  static Future<String?> show(BuildContext context, {required String initialText, required EditNoteDialogTexts texts}) =>
+      showDialog<String>(
+        context: context,
+        builder: (BuildContext context) => EditNoteDialogWidget(initialText: initialText, texts: texts),
+      );
 
   @override
   State<EditNoteDialogWidget> createState() => _EditNoteDialogWidgetState();
 }
 
 final class _EditNoteDialogWidgetState extends State<EditNoteDialogWidget> {
-  /// Title of the dialog.
-  static const String _title = 'Edit note';
-
-  /// Label of the cancel button.
-  static const String _cancelText = 'Cancel';
-
-  /// Label of the save button.
-  static const String _saveText = 'Save';
-
   late final TextEditingController _noteTextController;
 
   @override
@@ -45,11 +57,11 @@ final class _EditNoteDialogWidgetState extends State<EditNoteDialogWidget> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text(_title),
+      title: Text(widget.texts.titleText),
       content: TextField(controller: _noteTextController, autofocus: true),
       actions: <Widget>[
-        TextButton(onPressed: _onCancelPressed, child: const Text(_cancelText)),
-        TextButton(onPressed: _onSavePressed, child: const Text(_saveText)),
+        TextButton(onPressed: _onCancelPressed, child: Text(widget.texts.cancelLabel)),
+        TextButton(onPressed: _onSavePressed, child: Text(widget.texts.saveLabel)),
       ],
     );
   }

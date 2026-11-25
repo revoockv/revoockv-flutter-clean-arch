@@ -25,12 +25,14 @@ Example: `example/lib/features/notes/presentation/blocs/`.
 
 ## Widgets and state
 
-| Need | Use |
-|---|---|
-| Show the whole state | `context.watch<NotesBloc>().state` + `switch` over the sealed state |
-| Rebuild for one part only | `context.select<NoteActionsCubit, bool>(_isRunning)` in the lowest widget that shows it |
-| Snackbar, dialog, navigation, clearing a field | `BlocListener(listenWhen: _isFailure, listener: _onActionFailed)` — never in `build()` |
-| Send an action | `context.read<NoteActionsCubit>().add(text)` / `context.read<NotesBloc>().add(event)` in a private method |
+Pages, wrappers and dumb widgets: `wrappers.md`.
+
+| Need | Where | Use |
+|---|---|---|
+| Show one part of a state | a wrapper | `BlocSelector<NotesBloc, NotesState, Note?>(selector: _noteOf, …)` or `context.select<StatisticsBloc, bool>(_isLoadingOf)` |
+| Show the whole state | a wrapper, only when the widget shows all of it | `context.watch<NotesBloc>().state` + `switch` |
+| Snackbar, dialog, navigation, clearing a field | the page (or the wrapper that owns the field) | `BlocListener(listenWhen: _isFailure, listener: _onActionFailed)` — never in `build()` |
+| Send an action | the page | pass the method down: `onAddPressed: noteActionsCubit.add` |
 
 - `listenWhen`, `listener`, `selector` and `create` are private methods (static when they need no instance).
-- `watch` / `select` only in `build()`; `read` only in callbacks and `create`.
+- `watch` / `select` only in wrappers' `build()`; `read` only in pages (callbacks, `create`).

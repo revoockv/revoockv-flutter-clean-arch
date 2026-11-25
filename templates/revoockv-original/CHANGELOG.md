@@ -2,6 +2,25 @@
 
 Versions of this template. The skill itself has its own versions (`CHANGELOG.md` in the skill root).
 
+## [3.0.0]
+
+- Made from revoockv-original@2.1.0.
+
+## [3.0.0]
+
+- Made from revoockv-original@2.1.0.
+- Pages, wrappers and dumb widgets (`rules/state/wrappers.md`): the page owns the controller, starts the actions and
+  reacts, and never rebuilds; a wrapper in the new `presentation/wrappers/` folder selects with `watchPropertyValue`
+  exactly what one dumb widget shows and starts nothing; widgets in `widgets/` are dumb — data, texts and callbacks,
+  no watch_it, DI, use cases, controllers or translations; a dumb widget may own a plain Flutter controller
+  (`StatefulWidget`). Parameter names as in Flutter (`hintText`, `addLabel`, `isAdding`, `onTap`, `onAddPressed`).
+- Lists: the list wrapper selects the ids, an item wrapper (keyed by id) selects its item, so an edited note rebuilds
+  one tile. `example/test/rebuilds_test.dart` counts builds with `debugOnRebuildDirtyWidget`.
+- Lint: `widgets_dumb` and `wrappers_no_actions` on; `wrappers/` files and classes end with `_wrapper.dart` /
+  `Wrapper`.
+- Example: wrappers for the add button, the list, every note and every number of the statistics; `Note` and
+  `NotesStatistics` compare by value; the dumb widgets are the same files as in revoockv-bloc 2.0.0.
+
 ## [2.1.0]
 
 - Made from revoockv-original@2.0.0.

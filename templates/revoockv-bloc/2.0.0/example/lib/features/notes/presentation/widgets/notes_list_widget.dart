@@ -1,48 +1,44 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../domain/entities/note.dart';
-import '../blocs/note_actions_cubit.dart';
-import '../blocs/notes_bloc.dart';
-import '../blocs/notes_state.dart';
-import 'edit_note_dialog_widget.dart';
-import 'note_tile_widget.dart';
-import '../l10n/note_failure_text.dart';
-import '../../domain/entities/note_failure.dart';
-
-/// Live list of notes: a progress indicator while loading, the load error, or the notes.
-/// Editing and deleting go to [NoteActionsCubit].
+/// The notes: a progress indicator while loading, the load error, a text when there are none, or one item per id.
+///
+/// Dumb: it gets the ids in their order and builds each item with [itemBuilder], so an item that changes rebuilds
+/// alone.
 final class NotesListWidget extends StatelessWidget {
+  /// Whether the first notes have not arrived yet.
+  final bool isLoading;
+
+  /// The text of the load error, `null` when the notes are loaded.
+  final String? failureText;
+
   /// Text shown when there are no notes.
-  static const String _emptyText = 'No notes yet';
+  final String emptyText;
+
+  /// Ids of the notes, newest first.
+  final List<String> noteIds;
+
+  /// Builds the item of one note; give it a key of the note id.
+  final Widget Function(BuildContext context, String noteId) itemBuilder;
 
   /// Creates the list.
-  const NotesListWidget({super.key});
+  const NotesListWidget({
+    required this.isLoading,
+    required this.failureText,
+    required this.emptyText,
+    required this.noteIds,
+    required this.itemBuilder,
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final NotesState notes = context.watch<NotesBloc>().state;
-    return switch (notes) {
-      NotesLoading() => const Center(child: CircularProgressIndicator()),
-      NotesLoadFailed(:final NoteFailure failure) => Center(child: Text(failure.text)),
-      NotesLoaded(:final List<Note> notes) when notes.isEmpty => const Center(child: Text(_emptyText)),
-      NotesLoaded(:final List<Note> notes) => ListView(
-          children: <Widget>[
-            for (final Note note in notes)
-              NoteTileWidget(
-                note: note,
-                onEdit: (Note note) => _onEditPressed(context, note),
-                onDelete: context.read<NoteActionsCubit>().delete,
-              ),
-          ],
-        ),
-    };
-  }
-
-  /// Asks for the new text of [note] and saves it; nothing happens when the dialog is cancelled.
-  Future<void> _onEditPressed(BuildContext context, Note note) async {
-    final String? text = await EditNoteDialogWidget.show(context, note.text);
-    if (text == null || !context.mounted) return;
-    await context.read<NoteActionsCubit>().update(note.id, text);
+    final String? failure = failureText;
+    if (isLoading) return const Center(child: CircularProgressIndicator());
+    if (failure != null) return Center(child: Text(failure));
+    if (noteIds.isEmpty) return Center(child: Text(emptyText));
+    return ListView.builder(
+      itemCount: noteIds.length,
+      itemBuilder: (BuildContext context, int index) => itemBuilder(context, noteIds[index]),
+    );
   }
 }

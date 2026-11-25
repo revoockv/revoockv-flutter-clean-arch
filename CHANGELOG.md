@@ -17,6 +17,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   with the rule on.
 - Template revoockv-bloc 2.0.0: typed failures `Result<T, F>` with a failure enum per feature and its text in
   `presentation/l10n`, as in revoockv-original.
+- Templates revoockv-original 3.0.0 and revoockv-bloc 2.0.0: pages, wrappers and dumb widgets
+  (`rules/state/wrappers.md`); the example apps build their screens the same way with the same dumb widgets and test
+  their rebuild counts.
+- Linter rules `widgets_dumb` (a widget in `presentation/widgets/` imports no state manager, DI, use cases,
+  controllers, blocs, translations or other layers and reads no state) and `wrappers_no_actions` (a wrapper calls no
+  action use case and no `context.read`), opt-in; `naming_file` / `naming_class` know `wrappers/`
+  (`_wrapper.dart`, `Wrapper`).
 
 ## [0.11.1] - 2026-11-23
 
