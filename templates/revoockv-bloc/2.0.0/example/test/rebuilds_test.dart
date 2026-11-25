@@ -8,6 +8,8 @@ import 'package:example_app/features/notes/presentation/pages/notes_page.dart';
 import 'package:example_app/features/notes/presentation/widgets/add_note_widget.dart';
 import 'package:example_app/features/notes/presentation/widgets/note_tile_widget.dart';
 import 'package:example_app/features/notes/presentation/widgets/notes_list_widget.dart';
+import 'package:example_app/features/pins/domain/use_cases/toggle_pin_use_case.dart';
+import 'package:example_app/features/pins/presentation/widgets/pin_button_widget.dart';
 import 'package:example_app/features/statistics/presentation/pages/statistics_page.dart';
 import 'package:example_app/features/statistics/presentation/widgets/statistic_tile_widget.dart';
 import 'package:example_app/features/statistics/presentation/widgets/statistics_list_widget.dart';
@@ -75,6 +77,14 @@ void main() {
     expect(builds.of<NotesListWidget>(), 1);
     expect(builds.of<NoteTileWidget>(), 4);
     expect(builds.of<AddNoteWidget>(), 0);
+
+    builds.reset();
+    final List<Note> now = (await tester.runAsync(() => notesNow(tester, NotesPage)))!;
+    await tester.runAsync(() => context.read<TogglePinUseCase>()(now[2].id));
+    await settle(tester);
+    expect(builds.of<PinButtonWidget>(), 1, reason: 'the pin of another feature rebuilds only its own button');
+    expect(builds.of<NoteTileWidget>(), 0);
+    expect(builds.of<NotesListWidget>(), 0);
     await tester.pumpWidget(const SizedBox());
   });
 

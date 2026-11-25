@@ -70,4 +70,22 @@ void main() {
     expect(find.text('No notes yet'), findsNothing);
     await tester.pumpWidget(const SizedBox());
   });
+
+  testWidgets('pins a note with the pins feature; deleting the note drops the pin', (WidgetTester tester) async {
+    await registerAndInitForTest();
+    await tester.pumpWidget(notesApp);
+    await settle(tester);
+    await tester.enterText(find.byType(TextField), 'Buy milk');
+    await tester.tap(find.text('Add'));
+    await settle(tester);
+
+    await tester.tap(find.byTooltip('Pin'));
+    await settle(tester);
+    expect(find.byTooltip('Unpin'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Unpin'));
+    await settle(tester);
+    expect(find.byTooltip('Pin'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+  });
 }

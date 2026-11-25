@@ -16,8 +16,17 @@ final class NotesStatistics {
   /// Notes changed after they were written.
   final int edited;
 
+  /// Pinned notes.
+  final int pinned;
+
   /// Creates the numbers.
-  const NotesStatistics({required this.notes, required this.words, required this.addedToday, required this.edited});
+  const NotesStatistics({
+    required this.notes,
+    required this.words,
+    required this.addedToday,
+    required this.edited,
+    required this.pinned,
+  });
 
   @override
   bool operator ==(Object other) =>
@@ -25,10 +34,11 @@ final class NotesStatistics {
       other.notes == notes &&
       other.words == words &&
       other.addedToday == addedToday &&
-      other.edited == edited;
+      other.edited == edited &&
+      other.pinned == pinned;
 
   @override
-  int get hashCode => Object.hash(notes, words, addedToday, edited);
+  int get hashCode => Object.hash(notes, words, addedToday, edited, pinned);
 
   /// Counts [facts]; "today" is the day of [now].
   factory NotesStatistics.of(List<NoteFacts> facts, {required DateTime now}) => NotesStatistics(
@@ -36,6 +46,7 @@ final class NotesStatistics {
         words: facts.fold<int>(0, (int sum, NoteFacts note) => sum + _wordsOf(note.text)),
         addedToday: facts.where((NoteFacts note) => _sameDay(note.createdAt, now)).length,
         edited: facts.where((NoteFacts note) => note.updatedAt != note.createdAt).length,
+        pinned: facts.where((NoteFacts note) => note.isPinned).length,
       );
 
   static int _wordsOf(String text) {

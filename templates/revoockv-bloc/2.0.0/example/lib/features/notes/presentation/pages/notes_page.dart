@@ -10,6 +10,15 @@ import '../blocs/note_actions_cubit.dart';
 import '../blocs/note_actions_state.dart';
 import '../blocs/notes_bloc.dart';
 import '../blocs/notes_event.dart';
+import 'package:example_app/features/pins/domain/use_cases/toggle_pin_use_case.dart';
+import 'package:example_app/features/pins/domain/use_cases/watch_pinned_notes_use_case.dart';
+import 'package:example_app/features/pins/presentation/blocs/pin_actions_cubit.dart';
+import 'package:example_app/features/pins/presentation/blocs/pin_actions_state.dart';
+import 'package:example_app/features/pins/presentation/blocs/pins_bloc.dart';
+import 'package:example_app/features/pins/presentation/blocs/pins_event.dart';
+import 'package:example_app/features/pins/presentation/l10n/pin_failure_text.dart';
+import 'package:example_app/features/pins/presentation/wrappers/pin_button_wrapper.dart';
+
 import '../../domain/entities/note.dart';
 import '../widgets/edit_note_dialog_widget.dart';
 import '../wrappers/add_note_wrapper.dart';
@@ -27,6 +36,8 @@ final class NotesPage extends StatelessWidget {
       providers: const [
         BlocProvider<NotesBloc>(create: _createNotesBloc),
         BlocProvider<NoteActionsCubit>(create: _createNoteActionsCubit),
+        BlocProvider<PinsBloc>(create: _createPinsBloc),
+        BlocProvider<PinActionsCubit>(create: _createPinActionsCubit),
       ],
       child: const _NotesViewWidget(),
     );
@@ -36,10 +47,16 @@ final class NotesPage extends StatelessWidget {
       NotesBloc(watchNotesUseCase: context.read<WatchNotesUseCase>())..add(const NotesSubscribed());
 
   static NoteActionsCubit _createNoteActionsCubit(BuildContext context) => NoteActionsCubit(
-        addNoteUseCase: context.read<AddNoteUseCase>(),
-        updateNoteUseCase: context.read<UpdateNoteUseCase>(),
-        deleteNoteUseCase: context.read<DeleteNoteUseCase>(),
-      );
+    addNoteUseCase: context.read<AddNoteUseCase>(),
+    updateNoteUseCase: context.read<UpdateNoteUseCase>(),
+    deleteNoteUseCase: context.read<DeleteNoteUseCase>(),
+  );
+
+  static PinsBloc _createPinsBloc(BuildContext context) =>
+      PinsBloc(watchPinnedNotesUseCase: context.read<WatchPinnedNotesUseCase>())..add(const PinsSubscribed());
+
+  static PinActionsCubit _createPinActionsCubit(BuildContext context) =>
+      PinActionsCubit(togglePinUseCase: context.read<TogglePinUseCase>());
 }
 
 /// The tab below the blocs: holds the texts, passes the cubit's methods down as callbacks and shows action failures.
@@ -50,6 +67,8 @@ final class _NotesViewWidget extends StatelessWidget {
   static const String _addLabel = 'Add';
   static const String _emptyText = 'No notes yet';
   static const String _deleteTooltip = 'Delete';
+  static const String _pinTooltip = 'Pin';
+  static const String _unpinTooltip = 'Unpin';
   static const EditNoteDialogTexts _editTexts = EditNoteDialogTexts(
     titleText: 'Edit note',
     cancelLabel: 'Cancel',
@@ -61,24 +80,35 @@ final class _NotesViewWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final NoteActionsCubit noteActionsCubit = context.read<NoteActionsCubit>();
+    final PinActionsCubit pinActionsCubit = context.read<PinActionsCubit>();
     return BlocListener<NoteActionsCubit, NoteActionsState>(
       listenWhen: _isFailure,
       listener: _onActionFailed,
-      child: Padding(
-        padding: const EdgeInsets.all(AppTheme.spacingMedium),
-        child: Column(
-          children: <Widget>[
-            AddNoteWrapper(hintText: _hintText, addLabel: _addLabel, onAddPressed: noteActionsCubit.add),
-            const SizedBox(height: AppTheme.spacingMedium),
-            Expanded(
-              child: NotesListWrapper(
-                emptyText: _emptyText,
-                deleteTooltip: _deleteTooltip,
-                onNoteTap: (Note note) => _onEditPressed(context, note),
-                onDeletePressed: noteActionsCubit.delete,
+      child: BlocListener<PinActionsCubit, PinActionsState>(
+        listenWhen: _isPinFailure,
+        listener: _onPinFailed,
+        child: Padding(
+          padding: const EdgeInsets.all(AppTheme.spacingMedium),
+          child: Column(
+            children: <Widget>[
+              AddNoteWrapper(hintText: _hintText, addLabel: _addLabel, onAddPressed: noteActionsCubit.add),
+              const SizedBox(height: AppTheme.spacingMedium),
+              Expanded(
+                child: NotesListWrapper(
+                  emptyText: _emptyText,
+                  leadingBuilder: (String noteId) => PinButtonWrapper(
+                    noteId: noteId,
+                    pinTooltip: _pinTooltip,
+                    unpinTooltip: _unpinTooltip,
+                    onPressed: pinActionsCubit.toggle,
+                  ),
+                  deleteTooltip: _deleteTooltip,
+                  onNoteTap: (Note note) => _onEditPressed(context, note),
+                  onDeletePressed: noteActionsCubit.delete,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -88,6 +118,13 @@ final class _NotesViewWidget extends StatelessWidget {
 
   static void _onActionFailed(BuildContext context, NoteActionsState state) {
     if (state is! NoteActionsFailed) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.failure.text)));
+  }
+
+  static bool _isPinFailure(PinActionsState previous, PinActionsState current) => current is PinActionsFailed;
+
+  static void _onPinFailed(BuildContext context, PinActionsState state) {
+    if (state is! PinActionsFailed) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.failure.text)));
   }
 

@@ -1,5 +1,6 @@
 import 'package:example_app/core/data/data_sources/app_database.dart';
 import 'package:example_app/core/presentation/di/core_di.dart';
+import 'package:example_app/features/pins/domain/repositories/pins_repository.dart';
 import 'package:logger/logger.dart';
 import 'package:watch_it/watch_it.dart';
 
@@ -14,7 +15,8 @@ import '../../domain/use_cases/watch_notes_use_case.dart';
 
 /// Registers the notes feature and starts its async initialization.
 ///
-/// Plug the feature into any app with this single call; `di.allReady()` waits for its `init()`.
+/// Plug the feature into any app with this single call, after `registerAndInitPins()` — the notes feature uses the
+/// pins feature; `di.allReady()` waits for its `init()`.
 void registerAndInitNotes() {
   // 1. data sources — over the app's database (core)
   di.registerLazySingleton<NotesDataSource>(() => DatabaseNotesDataSource(database: di<AppDatabase>()));
@@ -29,5 +31,5 @@ void registerAndInitNotes() {
   di.registerLazySingleton<WatchNotesUseCase>(() => WatchNotesUseCase(di<NotesRepository>()));
   di.registerLazySingleton<AddNoteUseCase>(() => AddNoteUseCase(di<NotesRepository>()));
   di.registerLazySingleton<UpdateNoteUseCase>(() => UpdateNoteUseCase(di<NotesRepository>()));
-  di.registerLazySingleton<DeleteNoteUseCase>(() => DeleteNoteUseCase(di<NotesRepository>()));
+  di.registerLazySingleton<DeleteNoteUseCase>(() => DeleteNoteUseCase(di<NotesRepository>(), di<PinsRepository>()));
 }

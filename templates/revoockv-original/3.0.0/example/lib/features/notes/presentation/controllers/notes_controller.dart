@@ -1,5 +1,7 @@
 import 'package:example_app/core/domain/entities/result_state.dart';
 import 'package:flutter/widgets.dart' show TextEditingController, ValueNotifier;
+import 'package:example_app/features/pins/domain/entities/pin_failure.dart';
+
 import '../../domain/entities/note_failure.dart';
 
 /// UI state of the notes page, like a Flutter controller: the text of a new note
@@ -16,6 +18,9 @@ final class NotesController {
   /// Progress of changing a note.
   final ValueNotifier<ResultState<void, NoteFailure>> updatingStateController = ValueNotifier<ResultState<void, NoteFailure>>(ResultState.idle);
 
+  /// Progress of pinning or unpinning a note (the pins feature's action).
+  final ValueNotifier<ResultState<void, PinFailure>> pinningStateController = ValueNotifier<ResultState<void, PinFailure>>(ResultState.idle);
+
   /// Progress of deleting a note.
   final ValueNotifier<ResultState<void, NoteFailure>> deletingStateController = ValueNotifier<ResultState<void, NoteFailure>>(ResultState.idle);
 
@@ -31,5 +36,6 @@ final class NotesController {
     addingStateController.dispose();
     updatingStateController.dispose();
     deletingStateController.dispose();
+    pinningStateController.dispose();
   }
 }

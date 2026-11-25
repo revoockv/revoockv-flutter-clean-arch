@@ -11,6 +11,9 @@ final class NoteTileWrapper extends StatelessWidget {
   /// Id of the note to show.
   final String noteId;
 
+  /// Shown before the text (the pin button of the pins feature).
+  final Widget leading;
+
   /// Tooltip of the delete button.
   final String deleteTooltip;
 
@@ -23,6 +26,7 @@ final class NoteTileWrapper extends StatelessWidget {
   /// Creates the wrapper.
   const NoteTileWrapper({
     required this.noteId,
+    required this.leading,
     required this.deleteTooltip,
     required this.onTap,
     required this.onDeletePressed,
@@ -35,7 +39,13 @@ final class NoteTileWrapper extends StatelessWidget {
       selector: _noteOf,
       builder: (BuildContext context, Note? note) => note == null
           ? const SizedBox.shrink()
-          : NoteTileWidget(note: note, deleteTooltip: deleteTooltip, onTap: onTap, onDeletePressed: onDeletePressed),
+          : NoteTileWidget(
+              note: note,
+              leading: leading,
+              deleteTooltip: deleteTooltip,
+              onTap: onTap,
+              onDeletePressed: onDeletePressed,
+            ),
     );
   }
 

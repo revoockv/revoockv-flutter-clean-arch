@@ -18,6 +18,11 @@ Versions of this template. The skill itself has its own versions (`CHANGELOG.md`
   one tile. `example/test/rebuilds_test.dart` counts builds with `debugOnRebuildDirtyWidget`.
 - Lint: `widgets_dumb` and `wrappers_no_actions` on; `wrappers/` files and classes end with `_wrapper.dart` /
   `Wrapper`.
+- One feature uses another (`rules/structure/feature_dependencies.md`): through its domain and its UI parts, never its
+  data; no circles (lint `feature_dependencies`, on). The example gets the **pins** feature: notes use it
+  (`DeleteNoteUseCase` unpins, the notes page places `PinButtonWrapper` into `NoteTileWidget(leading: …)`), and the
+  statistics count notes and pins through their repositories instead of reading the `notes` table — their data source
+  and model are gone, `NoteFacts` keeps only what they count (`isPinned` added), a "Pinned" number is shown.
 - Example: wrappers for the add button, the list, every note and every number of the statistics; `Note` and
   `NotesStatistics` compare by value; the dumb widgets are the same files as in revoockv-bloc 2.0.0.
 

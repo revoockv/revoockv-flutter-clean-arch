@@ -29,7 +29,7 @@ git = "develop + <type>/<NNN>-<name> branches, [TYPE-NNN] commits, --no-ff merge
 # Topic → files (relative to this folder). Read only the topics of the task.
 workflow = ["rules/workflow.md"]
 decisions = ["rules/decisions.md"]
-structure = ["rules/structure/folder_structure.md"]
+structure = ["rules/structure/folder_structure.md", "rules/structure/feature_dependencies.md"]
 state = ["rules/state/blocs.md", "rules/state/widget_rules.md", "rules/state/wrappers.md"]
 di = ["rules/di/providers.md"]
 use_cases = ["rules/use_cases/use_case_naming.md"]
@@ -83,7 +83,7 @@ tracked = ["flutter_bloc", "bloc_test", "logger", "uuid", "flutter_lints"]
 # Rules of the watch_it model; this template has no watch_it, ValueNotifier state or GetIt.
 off = ["watching_widget", "watch_order", "value_listenable_exposure", "no_state_in_di", "no_controller_in_ui"]
 # Opt-in rules this template turns on.
-on = ["objects_not_maps", "widgets_dumb", "wrappers_no_actions"]
+on = ["objects_not_maps", "widgets_dumb", "wrappers_no_actions", "feature_dependencies"]
 warn = []
 
 [lint.params]

@@ -33,5 +33,6 @@ lib/
 ```
 
 Where state lives: stored data in the database behind the data sources (streamed out through the repositories);
-what a screen shows in its Bloc/Cubit; text being typed in a `TextEditingController` of a `StatefulWidget`. Features
-never import each other: two features over the same data each have their own data source and model.
+what a screen shows in its Bloc/Cubit; text being typed in a `TextEditingController` of a `StatefulWidget`. A feature
+uses another only through its domain and its UI parts, never its data, and never in a circle
+(`feature_dependencies.md`).

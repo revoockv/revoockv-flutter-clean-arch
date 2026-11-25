@@ -1211,6 +1211,39 @@ class DumbWidgetsAndWrappersTest(unittest.TestCase):
         self.assertTrue({"widgets_dumb", "wrappers_no_actions"} <= linter.OPT_IN_RULES)
 
 
+class FeatureDependenciesTest(unittest.TestCase):
+    RULES = {"feature_dependencies"}
+
+    def test_domain_and_ui_of_another_feature_are_allowed(self):
+        files = {
+            "features/notes/domain/use_cases/delete_note_use_case.dart":
+                "import 'package:app/features/pins/domain/repositories/pins_repository.dart';\n",
+            "features/notes/presentation/pages/notes_page.dart":
+                "import '../../../pins/presentation/wrappers/pin_button_wrapper.dart';\n"
+                "import 'package:app/features/pins/presentation/di/pins_getters.dart';\n",
+            "features/pins/domain/repositories/pins_repository.dart": "abstract interface class PinsRepository {}\n",
+        }
+        self.assertEqual(run(files, self.RULES), [])
+
+    def test_data_and_di_registration_of_another_feature_are_violations(self):
+        files = {
+            "features/statistics/data/repositories/statistics_repository_impl.dart":
+                "import 'package:app/features/notes/data/models/note_model.dart';\n"
+                "import 'package:app/features/notes/presentation/di/notes_di.dart';\n",
+        }
+        self.assertEqual([line for _, _, line in run(files, self.RULES)], [1, 2])
+
+    def test_features_that_use_each_other_are_violations(self):
+        files = {
+            "features/notes/domain/use_cases/delete_note_use_case.dart":
+                "import 'package:app/features/pins/domain/repositories/pins_repository.dart';\n",
+            "features/pins/domain/use_cases/pin_use_case.dart":
+                "import 'package:app/features/notes/domain/entities/note.dart';\n",
+        }
+        found = {(name, line) for name, _, line in run(files, self.RULES)}
+        self.assertEqual(found, {("delete_note_use_case.dart", 1), ("pin_use_case.dart", 1)})
+
+
 class FalsePositivesTest(unittest.TestCase):
     def test_closure_forwarding_an_enum_value_is_allowed(self):
         code = """

@@ -19,7 +19,10 @@ Versions of this template. The skill itself has its own versions (`CHANGELOG.md`
   blocs, passes their methods down as callbacks and reacts with `BlocListener`; a wrapper selects with `BlocSelector` /
   `context.select` exactly what one dumb widget shows and starts nothing; widgets in `widgets/` are dumb — the same
   files as in revoockv-original 3.0.0. An edited note rebuilds one tile (`example/test/rebuilds_test.dart`).
-- Lint: `widgets_dumb` and `wrappers_no_actions` on.
+- Lint: `widgets_dumb`, `wrappers_no_actions` and `feature_dependencies` on.
+- One feature uses another (`rules/structure/feature_dependencies.md`), as in revoockv-original 3.0.0: the **pins**
+  feature (`PinsBloc`, `PinActionsCubit`, `PinButtonWrapper`); notes use it, statistics count notes and pins through
+  their repositories; `PinsProvidersWidget` sits above the features that use it.
 
 ## [1.1.0]
 

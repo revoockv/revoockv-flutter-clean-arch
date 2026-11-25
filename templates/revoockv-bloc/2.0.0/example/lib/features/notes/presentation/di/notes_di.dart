@@ -1,4 +1,5 @@
 import 'package:example_app/core/data/data_sources/app_database.dart';
+import 'package:example_app/features/pins/domain/repositories/pins_repository.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logger/logger.dart';
@@ -14,7 +15,8 @@ import '../../domain/use_cases/watch_notes_use_case.dart';
 
 /// The notes feature in the tree, bottom-up: data source → repository → use cases.
 ///
-/// Created lazily on the first `context.read<…>()`; the data source works over the app's database (core).
+/// Created lazily on the first `context.read<…>()`; the data source works over the app's database (core). It sits
+/// below `PinsProvidersWidget`: the notes feature uses the pins feature.
 final class NotesProvidersWidget extends StatelessWidget {
   /// The widgets below.
   final Widget child;
@@ -60,5 +62,5 @@ final class NotesProvidersWidget extends StatelessWidget {
       UpdateNoteUseCase(context.read<NotesRepository>());
 
   static DeleteNoteUseCase _createDeleteNoteUseCase(BuildContext context) =>
-      DeleteNoteUseCase(context.read<NotesRepository>());
+      DeleteNoteUseCase(context.read<NotesRepository>(), context.read<PinsRepository>());
 }

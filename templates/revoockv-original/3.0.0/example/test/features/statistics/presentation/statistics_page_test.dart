@@ -14,10 +14,10 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: Scaffold(body: StatisticsPage())));
     await settle(tester);
 
-    for (final String label in <String>['Notes', 'Words', 'Added today', 'Edited']) {
+    for (final String label in <String>['Notes', 'Words', 'Added today', 'Edited', 'Pinned']) {
       expect(find.widgetWithText(ListTile, label), findsOneWidget);
     }
-    expect(find.text('0'), findsNWidgets(4));
+    expect(find.text('0'), findsNWidgets(5));
     await tester.pumpWidget(const SizedBox());
   });
 }

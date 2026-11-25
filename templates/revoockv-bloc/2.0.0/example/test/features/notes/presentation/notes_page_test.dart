@@ -60,4 +60,20 @@ void main() {
     expect(find.text('Could not load the notes'), findsOneWidget);
     expect(find.text('No notes yet'), findsNothing);
   });
+
+  testWidgets('pins a note with the pins feature', (WidgetTester tester) async {
+    await tester.pumpWidget(testApp(notesPage));
+    await settle(tester);
+    await tester.enterText(find.byType(TextField), 'Buy milk');
+    await tester.tap(find.text('Add'));
+    await settle(tester);
+
+    await tester.tap(find.byTooltip('Pin'));
+    await settle(tester);
+    expect(find.byTooltip('Unpin'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Unpin'));
+    await settle(tester);
+    expect(find.byTooltip('Pin'), findsOneWidget);
+  });
 }

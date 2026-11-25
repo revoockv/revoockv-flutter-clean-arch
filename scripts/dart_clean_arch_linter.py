@@ -105,11 +105,12 @@ ALL_RULES = {
     "objects_not_maps",
     "widgets_dumb",
     "wrappers_no_actions",
+    "feature_dependencies",
 }
 
 # Rules a template turns on itself (`[lint] on`): with all rules they run only when listed there, so the templates
 # made before them keep passing.
-OPT_IN_RULES = {"watch_select", "core_widgets_pure", "objects_not_maps", "widgets_dumb", "wrappers_no_actions"}
+OPT_IN_RULES = {"watch_select", "core_widgets_pure", "objects_not_maps", "widgets_dumb", "wrappers_no_actions", "feature_dependencies"}
 
 # Folders (relative to lib/) of the widgets shared by features (the template's [lint.params] core_widget_dirs)
 CORE_WIDGET_DIRS: tuple[str, ...] = ()
@@ -2710,6 +2711,100 @@ def check_wrappers_no_actions(result: AnalysisResult) -> None:
             ))
 
 
+# ── feature_dependencies ────────────────────────────────────────────
+
+_IMPORT_URI = re.compile(r"""^\s*(?:import|export)\s+['"]([^'"]+)['"]""", re.M)
+# What one feature may use of another: its domain and its UI parts — never its data, controllers or DI registration.
+_FEATURE_PART_ALLOWED = re.compile(
+    r"^(?:domain/|presentation/(?:widgets|wrappers|blocs|pages|l10n)/|presentation/di/[^/]*_getters\.dart$)"
+)
+_FEATURE_GRAPHS: dict[str, dict[str, set[str]]] = {}
+
+
+def _feature_target(lib_root: Path, file_path: Path, uri: str) -> tuple[str, str] | None:
+    """(feature, path inside it) that [uri] of [file_path] points to, or None outside lib/features."""
+    if uri.startswith("package:"):
+        rest = uri.split("/", 1)[1] if "/" in uri else ""
+        target = (lib_root / rest).resolve()
+    elif uri.startswith("dart:"):
+        return None
+    else:
+        target = (file_path.parent / uri).resolve()
+    try:
+        rel = target.relative_to((lib_root / "features").resolve()).as_posix()
+    except ValueError:
+        return None
+    feature, _, inside = rel.partition("/")
+    return feature, inside
+
+
+def _feature_graph(lib_root: str) -> dict[str, set[str]]:
+    """Feature → the features it imports, over every file of lib/features (cached per lib root)."""
+    if lib_root in _FEATURE_GRAPHS:
+        return _FEATURE_GRAPHS[lib_root]
+    root = Path(lib_root)
+    graph: dict[str, set[str]] = {}
+    features = root / "features"
+    for f in sorted(features.rglob("*.dart")) if features.is_dir() else []:
+        owner = f.relative_to(features).parts[0]
+        for uri in _IMPORT_URI.findall(_read_file(f)):
+            target = _feature_target(root, f, uri)
+            if target and target[0] != owner:
+                graph.setdefault(owner, set()).add(target[0])
+    _FEATURE_GRAPHS[lib_root] = graph
+    return graph
+
+
+def _reaches(graph: dict[str, set[str]], start: str, goal: str) -> bool:
+    seen: set[str] = set()
+    stack = [start]
+    while stack:
+        node = stack.pop()
+        if node == goal:
+            return True
+        if node in seen:
+            continue
+        seen.add(node)
+        stack.extend(graph.get(node, ()))
+    return False
+
+
+def check_feature_dependencies(result: AnalysisResult) -> None:
+    """A feature uses another only through its domain and its UI parts, and the features never depend in a circle.
+
+    Allowed from another feature: `domain/`, `presentation/{widgets,wrappers,blocs,pages,l10n}/` and its
+    `<feature>_getters.dart`. Not allowed: its `data/`, its controllers and its DI registration. An import that closes
+    a circle (notes → pins → notes) is a violation too.
+    """
+    lib_root = _lib_root(result.file)
+    owner = _owner_of(result.file)
+    if lib_root is None or owner in (None, "core"):
+        return
+    path = Path(result.file).resolve()
+    content = _read_file(Path(result.file))
+    graph = _feature_graph(str(Path(lib_root).resolve()))
+    for m in _IMPORT_URI.finditer(content):
+        target = _feature_target(Path(lib_root).resolve(), path, m.group(1))
+        if not target or target[0] == owner:
+            continue
+        feature, inside = target
+        line = content.count("\n", 0, m.start()) + 1
+        if not _FEATURE_PART_ALLOWED.match(inside):
+            result.violations.append(Violation(
+                file=result.file, line=line, rule="feature_dependencies",
+                message=f"'{owner}' uses '{feature}' only through its domain and its UI parts (widgets, wrappers, "
+                        f"blocs, pages, l10n, getters) — not '{inside}'",
+                snippet=_line_at(content, line),
+            ))
+        elif _reaches(graph, feature, owner):
+            result.violations.append(Violation(
+                file=result.file, line=line, rule="feature_dependencies",
+                message=f"'{owner}' and '{feature}' depend on each other — one of them must not know the other "
+                        "(move the shared part into the feature both use, or into core)",
+                snippet=_line_at(content, line),
+            ))
+
+
 # ── Main ────────────────────────────────────────────────────────────
 
 CHECKERS = {
@@ -2748,6 +2843,7 @@ CHECKERS = {
     "objects_not_maps": check_objects_not_maps,
     "widgets_dumb": check_widgets_dumb,
     "wrappers_no_actions": check_wrappers_no_actions,
+    "feature_dependencies": check_feature_dependencies,
 }
 def _collect_dart_files(path: str) -> list[Path]:
     """Collect all .dart files under the given path."""
