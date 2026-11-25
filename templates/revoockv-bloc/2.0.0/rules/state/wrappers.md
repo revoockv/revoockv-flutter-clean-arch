@@ -62,7 +62,8 @@ from the page. It rebuilds only when that part changes.
   `List` or a `.where(…)` result: it differs on every call and the wrapper rebuilds every time.
 - It turns a failure into its text (`failure.text` from `presentation/l10n`) — the widget gets a `String`.
 - **It starts nothing:** no action use case, no `context.read<…>()` of a cubit — the page passes those as callbacks
-  (linter: `wrappers_no_actions`). Watch use cases (`watchNotesUseCase()`) are its job.
+  (linter: `wrappers_no_actions`). Watch use cases (`watchNotesUseCase()`) and pure derivations from what it
+  watches (`calculate…`, `build…`, `find…` use cases) are its job.
 - It may own a plain Flutter controller when the page has none (bloc: `AddNoteWrapper` owns the field's controller).
 
 ## Pages — `presentation/pages/`
