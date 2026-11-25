@@ -102,11 +102,19 @@ ALL_RULES = {
     "controller_no_actions",
     "watch_select",
     "core_widgets_pure",
+    "objects_not_maps",
+    "widgets_dumb",
+    "wrappers_no_actions",
+    "feature_dependencies",
+    "one_widget_per_file",
 }
 
 # Rules a template turns on itself (`[lint] on`): with all rules they run only when listed there, so the templates
 # made before them keep passing.
-OPT_IN_RULES = {"watch_select", "core_widgets_pure"}
+OPT_IN_RULES = {
+    "watch_select", "core_widgets_pure", "objects_not_maps", "widgets_dumb", "wrappers_no_actions",
+    "feature_dependencies", "one_widget_per_file",
+}
 
 # Folders (relative to lib/) of the widgets shared by features (the template's [lint.params] core_widget_dirs)
 CORE_WIDGET_DIRS: tuple[str, ...] = ()
@@ -408,11 +416,19 @@ def check_naming_file(result: AnalysisResult) -> None:
             message=f"Widget file '{basename}' must end with _widget.dart",
         ))
 
-    # Page files
-    if "pages/" in fp and not basename.endswith("_page.dart"):
+    # Wrapper files
+    if "wrappers/" in fp and not basename.endswith("_wrapper.dart"):
         result.violations.append(Violation(
             file=fp, line=0, rule="naming_file",
-            message=f"Page file '{basename}' must end with _page.dart",
+            message=f"Wrapper file '{basename}' must end with _wrapper.dart",
+        ))
+
+    # Page files
+    # Page files; `_view.dart` is the part of a page below its providers (bloc: XPage provides, XView shows)
+    if "pages/" in fp and not basename.endswith(("_page.dart", "_view.dart")):
+        result.violations.append(Violation(
+            file=fp, line=0, rule="naming_file",
+            message=f"Page file '{basename}' must end with _page.dart (or _view.dart for the view below its providers)",
         ))
 
     # Use case files
@@ -454,7 +470,16 @@ def check_naming_class(result: AnalysisResult) -> None:
            re.search(r'\bextends\s+StatefulWidget', line) or \
            re.search(r'\bextends\s+WatchingWidget', line) or \
            re.search(r'\bextends\s+WatchingStatefulWidget', line):
-            if not class_name.endswith("Widget") and not class_name.endswith("Page"):
+            in_wrappers = "/wrappers/" in result.file.replace(os.sep, "/")
+            if in_wrappers and not class_name.endswith("Wrapper"):
+                result.violations.append(Violation(
+                    file=result.file, line=i, rule="naming_class",
+                    message=f"Wrapper class '{class_name}' must end with Wrapper suffix",
+                    snippet=_line_at(content, i),
+                ))
+            elif not in_wrappers and not class_name.endswith(("Widget", "Page")) and not (
+                class_name.endswith("View") and "/pages/" in result.file.replace(os.sep, "/")
+            ):
                 result.violations.append(Violation(
                     file=result.file, line=i, rule="naming_class",
                     message=f"Widget class '{class_name}' must end with Widget suffix",
@@ -1767,10 +1792,12 @@ def check_widget_key_parameter(result: AnalysisResult) -> None:
             # Look at the constructor line and possibly the next few lines
             constructor_text = ""
             brace_depth = 0
-            for j in range(constructor_line - 1, min(constructor_line + 9, len(lines))):
+            # The whole parameter list, however many lines: up to the line that closes it (`});` / `);` / `}) :`).
+            paren_depth = 0
+            for j in range(constructor_line - 1, len(lines)):
                 constructor_text += lines[j]
-                brace_depth += lines[j].count('{') - lines[j].count('}')
-                if brace_depth <= 0 and '{' in lines[j]:
+                paren_depth += lines[j].count('(') - lines[j].count(')')
+                if paren_depth <= 0:
                     break
 
             # Check for named key parameter: {Key? key} or {required Key key} or {Key key} or super.key
@@ -2501,6 +2528,349 @@ def check_core_widgets_pure(result: AnalysisResult) -> None:
             ))
 
 
+# ── objects_not_maps ────────────────────────────────────────────────
+
+_RECORD_MAP = re.compile(r'\bMap<\s*(?:String|dynamic)\s*,\s*(?:dynamic|Object\??)\s*>')
+_ANY_MAP = re.compile(r'\bMap<')
+_TYPE_DECL = re.compile(r'\b(?:class|mixin|enum|extension)\s+(\w+)?')
+_IDENT = re.compile(r'[A-Za-z_$][\w$]*')
+
+
+def _skip_generic(code: str, start: int) -> int:
+    """Index just after the `<…>` that opens at [start]."""
+    depth = 0
+    for k in range(start, len(code)):
+        if code[k] == '<':
+            depth += 1
+        elif code[k] == '>':
+            depth -= 1
+            if depth == 0:
+                return k + 1
+    return len(code)
+
+
+def _declared_name(code: str, after_type: int) -> str:
+    """The name that follows a type ending at [after_type] (`Map<…>? name`, `Map<…>> name`, `Map<…> get name`)."""
+    k = after_type
+    while k < len(code) and code[k] in '>?, \t\n':
+        if code[k] == ',':
+            return ''
+        k += 1
+    m = _IDENT.match(code, k)
+    if not m:
+        return ''
+    name = m.group(0)
+    if name == 'get':
+        k = m.end()
+        while k < len(code) and code[k] in ' \t\n':
+            k += 1
+        m = _IDENT.match(code, k)
+        return m.group(0) if m else ''
+    return name
+
+
+def _callable_name(code: str, open_paren: int) -> str:
+    """The name right before the parenthesis at [open_paren] (`_helper(`, `Foo._(`, `Widget(`)."""
+    k = open_paren - 1
+    while k >= 0 and code[k] in ' \t\n':
+        k -= 1
+    end = k + 1
+    while k >= 0 and (code[k].isalnum() or code[k] in '_$'):
+        k -= 1
+    return code[k + 1:end]
+
+
+def check_objects_not_maps(result: AnalysisResult) -> None:
+    """Data with a shape is an object: record maps stay at the storage boundary (data/models, data/data_sources), and
+    the API of domain/presentation has no Map."""
+    path = result.file.replace(os.sep, '/')
+    if '/data/models/' in path or '/data/data_sources/' in path:
+        return
+    content = _read_file(Path(result.file))
+    code, _ = _scan_dart(content)
+
+    def report(offset: int, message: str) -> None:
+        line = code.count('\n', 0, offset) + 1
+        result.violations.append(Violation(
+            file=result.file, line=line, rule="objects_not_maps", message=message, snippet=_line_at(content, line),
+        ))
+
+    for m in _RECORD_MAP.finditer(code):
+        report(m.start(), f"'{m.group(0)}' is a record without a type: give it a class (a model in data/models "
+                          "reads and writes the raw map; a data source hands it over)")
+
+    if not (_is_domain_file(path) or _is_presentation_file(path)):
+        return
+    # Walk the brackets: a Map is part of the API when no function body is open around it.
+    stack: list[tuple[str, str]] = []  # (bracket, kind) — kind: 'class:<name>', 'body', 'paren', 'other'
+    pending_class: str | None = None
+    record_starts = {m.start() for m in _RECORD_MAP.finditer(code)}
+    i = 0
+    n = len(code)
+    while i < n:
+        c = code[i]
+        decl = _TYPE_DECL.match(code, i) if (c.isalpha() and (i == 0 or not (code[i - 1].isalnum() or code[i - 1] == '_'))) else None
+        if decl:
+            pending_class = decl.group(1) or ''
+            i = decl.end()
+            continue
+        if c == ';':
+            pending_class = None
+        elif c == '(':
+            stack.append(('(', 'paren:' + _callable_name(code, i)))
+        elif c == '[':
+            stack.append(('[', 'other'))
+        elif c == '{':
+            if pending_class is not None:
+                stack.append(('{', 'class:' + pending_class))
+                pending_class = None
+            elif stack and stack[-1][0] == '(':
+                stack.append(('{', 'other'))  # named parameters, a literal
+            else:
+                stack.append(('{', 'body'))
+        elif c in ')]}':
+            if stack:
+                stack.pop()
+        elif c == 'M' and _ANY_MAP.match(code, i) and (i == 0 or not (code[i - 1].isalnum() or code[i - 1] == '_')):
+            kinds = [kind for _, kind in stack]
+            in_body = 'body' in kinds
+            classes = [k[6:] for k in kinds if k.startswith('class:')]
+            if not in_body and i not in record_starts and not any(name.startswith('_') for name in classes):
+                parens = [k[6:] for k in kinds if k.startswith('paren:')]
+                owner = parens[-1] if parens else _declared_name(code, _skip_generic(code, i + 3))
+                if owner and not owner.startswith('_'):
+                    report(i, f"'Map' in the API of '{owner}': wrap it in an object that answers the question "
+                              "(or a List of entities); a Map stays a local lookup or a private field")
+            i = _skip_generic(code, i + 3)
+            continue
+        i += 1
+
+
+# ── widgets_dumb / wrappers_no_actions ──────────────────────────────
+
+# What a dumb widget of a feature must not import: app state, DI, translations, the smart parts and other layers.
+_DUMB_WIDGET_FORBIDDEN = re.compile(
+    r"package:(?:watch_it|get_it|flutter_bloc|bloc|provider|riverpod|flutter_riverpod)/"
+    r"|['/](?:data|di|l10n|controllers|blocs|pages|wrappers|repositories|use_cases)/|_getters\.dart"
+)
+_STATE_READ = re.compile(r'\bcontext\.(?:read|watch|select)\s*<|\b(?:watch|watchValue|watchPropertyValue|watchIt|'
+                         r'registerHandler|createOnce|callOnce)\s*[<(]')
+# A use case that starts something; watch… and the pure derivations calculate… / build… / find… are not actions.
+_ACTION_USE_CASE_CALL = re.compile(r'\b(?!watch|calculate|build|find)[a-z]\w*UseCase\s*\(')
+_CONTEXT_READ = re.compile(r'\bcontext\.read\s*<')
+
+
+def _in_presentation_folder(file_path: str, folder: str) -> bool:
+    return f'/presentation/{folder}/' in file_path.replace(os.sep, '/')
+
+
+def check_widgets_dumb(result: AnalysisResult) -> None:
+    """The widgets of a feature (`presentation/widgets/`) are dumb: data and callbacks in, nothing of the app's state.
+
+    No state manager, DI, getters, use cases, controllers, blocs, translations, wrappers or other layers; no watching
+    and no reading of state from the context. The page and the wrappers do that and pass the values.
+    """
+    if not _in_presentation_folder(result.file, 'widgets'):
+        return
+    content = _read_file(Path(result.file))
+    for i, line in enumerate(content.splitlines(), 1):
+        stripped = line.strip()
+        if stripped.startswith(("import ", "export ")) and _DUMB_WIDGET_FORBIDDEN.search(stripped):
+            result.violations.append(Violation(
+                file=result.file, line=i, rule="widgets_dumb",
+                message="A widget takes data and callbacks: the state, use cases, translations and other layers stay "
+                        "in the page and the wrappers",
+                snippet=_line_at(content, i),
+            ))
+    code, _ = _scan_dart(content)
+    for m in _STATE_READ.finditer(code):
+        i = code.count("\n", 0, m.start()) + 1
+        result.violations.append(Violation(
+            file=result.file, line=i, rule="widgets_dumb",
+            message="A widget reads no state: a wrapper selects the value and passes it",
+            snippet=_line_at(content, i),
+        ))
+    for name, base, _, offset, _ in _widget_classes(code):
+        if base in ("WatchingWidget", "WatchingStatefulWidget"):
+            i = code.count("\n", 0, offset) + 1
+            result.violations.append(Violation(
+                file=result.file, line=i, rule="widgets_dumb",
+                message=f"{name}: a widget watches nothing — make it a StatelessWidget and give it a wrapper",
+                snippet=_line_at(content, i),
+            ))
+
+
+def check_wrappers_no_actions(result: AnalysisResult) -> None:
+    """A wrapper (`presentation/wrappers/`) selects state for one widget and starts nothing.
+
+    Watch use cases (`watchNotesUseCase()`) and pure derivations (`calculate…`, `build…`, `find…`) are fine; an action
+    use case or `context.read<…>()` (a cubit's method) belongs to the page, which passes it down as a callback.
+    """
+    if not _in_presentation_folder(result.file, 'wrappers'):
+        return
+    content = _read_file(Path(result.file))
+    code, _ = _scan_dart(content)
+    for pattern, message in (
+        (_ACTION_USE_CASE_CALL, "A wrapper calls no action use case: the page does and passes a callback"),
+        (_CONTEXT_READ, "A wrapper starts nothing with context.read: the page passes the cubit's method as a callback"),
+    ):
+        for m in pattern.finditer(code):
+            i = code.count("\n", 0, m.start()) + 1
+            result.violations.append(Violation(
+                file=result.file, line=i, rule="wrappers_no_actions", message=message, snippet=_line_at(content, i),
+            ))
+
+
+# ── one_widget_per_file ─────────────────────────────────────────────
+
+_WIDGET_BASES = {"StatelessWidget", "StatefulWidget", "WatchingWidget", "WatchingStatefulWidget"}
+# A part of the screen that reads state: watch_it, the bloc builders, or the context's read/watch/select.
+_HIDDEN_WRAPPER = re.compile(
+    r'\b(?:watch|watchValue|watchPropertyValue|watchIt|registerHandler|createOnce|callOnce)\s*[<(]'
+    r'|\bBloc(?:Builder|Selector|Listener|Consumer)\s*[<(]|\bcontext\.(?:read|watch|select)\s*<'
+)
+# The most lines (the class block) a private helper widget may have; a bigger one gets a file of its own.
+SMALL_PRIVATE_WIDGET_LINES = 40
+
+
+def check_one_widget_per_file(result: AnalysisResult) -> None:
+    """One widget per file in `presentation/` (pages, wrappers, widgets); only small dumb helpers may share it.
+
+    - One public widget (its `State` and its `…Texts` class belong to it).
+    - A private widget may stay next to it only when it is small (at most `SMALL_PRIVATE_WIDGET_LINES` lines) and
+      reads no state; a bigger one goes to `widgets/` as a public widget.
+    - A private widget that reads state is a hidden wrapper: it goes to `wrappers/` (`<name>_wrapper.dart`).
+    """
+    if not _is_presentation_file(result.file) or _is_in_di_folder(result.file):
+        return
+    content = _read_file(Path(result.file))
+    code, _ = _scan_dart(content)
+    widgets = [w for w in _widget_classes(code) if w[1] in _WIDGET_BASES]
+    public = [w for w in widgets if not w[0].startswith("_")]
+    for name, _, _, offset, _ in public[1:]:
+        i = code.count("\n", 0, offset) + 1
+        result.violations.append(Violation(
+            file=result.file, line=i, rule="one_widget_per_file",
+            message=f"{name}: one public widget per file — move it to a file of its own",
+            snippet=_line_at(content, i),
+        ))
+    for name, base, _, offset, body in widgets:
+        if not name.startswith("_"):
+            continue
+        i = code.count("\n", 0, offset) + 1
+        state = _state_body(code, name) if base in ("StatefulWidget", "WatchingStatefulWidget") else ""
+        if base.startswith("Watching") or _HIDDEN_WRAPPER.search(body + state):
+            message = f"{name} reads state: it is a wrapper — move it to wrappers/ as a public …Wrapper"
+        elif body.count("\n") + state.count("\n") > SMALL_PRIVATE_WIDGET_LINES:
+            message = (f"{name} is over {SMALL_PRIVATE_WIDGET_LINES} lines: move it to widgets/ as a public widget "
+                       f"of its own")
+        else:
+            continue
+        result.violations.append(Violation(
+            file=result.file, line=i, rule="one_widget_per_file", message=message, snippet=_line_at(content, i),
+        ))
+
+
+def _state_body(code: str, widget: str) -> str:
+    """The body of the `State<[widget]>` class in [code], or an empty string."""
+    m = re.search(r'\bclass\s+\w+\s+extends\s+State\s*<\s*' + re.escape(widget) + r'\s*>[^{;]*\{', code)
+    return code[m.end():_block_end(code, m.end() - 1)] if m else ""
+
+
+# ── feature_dependencies ────────────────────────────────────────────
+
+_IMPORT_URI = re.compile(r"""^\s*(?:import|export)\s+['"]([^'"]+)['"]""", re.M)
+# What one feature may use of another: its domain and its UI parts — never its data, controllers or DI registration.
+_FEATURE_PART_ALLOWED = re.compile(
+    r"^(?:domain/|presentation/(?:widgets|wrappers|blocs|pages|l10n)/|presentation/di/[^/]*_getters\.dart$)"
+)
+_FEATURE_GRAPHS: dict[str, dict[str, set[str]]] = {}
+
+
+def _feature_target(lib_root: Path, file_path: Path, uri: str) -> tuple[str, str] | None:
+    """(feature, path inside it) that [uri] of [file_path] points to, or None outside lib/features."""
+    if uri.startswith("package:"):
+        rest = uri.split("/", 1)[1] if "/" in uri else ""
+        target = (lib_root / rest).resolve()
+    elif uri.startswith("dart:"):
+        return None
+    else:
+        target = (file_path.parent / uri).resolve()
+    try:
+        rel = target.relative_to((lib_root / "features").resolve()).as_posix()
+    except ValueError:
+        return None
+    feature, _, inside = rel.partition("/")
+    return feature, inside
+
+
+def _feature_graph(lib_root: str) -> dict[str, set[str]]:
+    """Feature → the features it imports, over every file of lib/features (cached per lib root)."""
+    if lib_root in _FEATURE_GRAPHS:
+        return _FEATURE_GRAPHS[lib_root]
+    root = Path(lib_root)
+    graph: dict[str, set[str]] = {}
+    features = root / "features"
+    for f in sorted(features.rglob("*.dart")) if features.is_dir() else []:
+        owner = f.relative_to(features).parts[0]
+        for uri in _IMPORT_URI.findall(_read_file(f)):
+            target = _feature_target(root, f, uri)
+            if target and target[0] != owner:
+                graph.setdefault(owner, set()).add(target[0])
+    _FEATURE_GRAPHS[lib_root] = graph
+    return graph
+
+
+def _reaches(graph: dict[str, set[str]], start: str, goal: str) -> bool:
+    seen: set[str] = set()
+    stack = [start]
+    while stack:
+        node = stack.pop()
+        if node == goal:
+            return True
+        if node in seen:
+            continue
+        seen.add(node)
+        stack.extend(graph.get(node, ()))
+    return False
+
+
+def check_feature_dependencies(result: AnalysisResult) -> None:
+    """A feature uses another only through its domain and its UI parts, and the features never depend in a circle.
+
+    Allowed from another feature: `domain/`, `presentation/{widgets,wrappers,blocs,pages,l10n}/` and its
+    `<feature>_getters.dart`. Not allowed: its `data/`, its controllers and its DI registration. An import that closes
+    a circle (notes → pins → notes) is a violation too.
+    """
+    lib_root = _lib_root(result.file)
+    owner = _owner_of(result.file)
+    if lib_root is None or owner in (None, "core"):
+        return
+    path = Path(result.file).resolve()
+    content = _read_file(Path(result.file))
+    graph = _feature_graph(str(Path(lib_root).resolve()))
+    for m in _IMPORT_URI.finditer(content):
+        target = _feature_target(Path(lib_root).resolve(), path, m.group(1))
+        if not target or target[0] == owner:
+            continue
+        feature, inside = target
+        line = content.count("\n", 0, m.start()) + 1
+        if not _FEATURE_PART_ALLOWED.match(inside):
+            result.violations.append(Violation(
+                file=result.file, line=line, rule="feature_dependencies",
+                message=f"'{owner}' uses '{feature}' only through its domain and its UI parts (widgets, wrappers, "
+                        f"blocs, pages, l10n, getters) — not '{inside}'",
+                snippet=_line_at(content, line),
+            ))
+        elif _reaches(graph, feature, owner):
+            result.violations.append(Violation(
+                file=result.file, line=line, rule="feature_dependencies",
+                message=f"'{owner}' and '{feature}' depend on each other — one of them must not know the other "
+                        "(move the shared part into the feature both use, or into core)",
+                snippet=_line_at(content, line),
+            ))
+
+
 # ── Main ────────────────────────────────────────────────────────────
 
 CHECKERS = {
@@ -2536,6 +2906,11 @@ CHECKERS = {
     "controller_no_actions": check_controller_no_actions,
     "watch_select": check_watch_select,
     "core_widgets_pure": check_core_widgets_pure,
+    "objects_not_maps": check_objects_not_maps,
+    "widgets_dumb": check_widgets_dumb,
+    "wrappers_no_actions": check_wrappers_no_actions,
+    "one_widget_per_file": check_one_widget_per_file,
+    "feature_dependencies": check_feature_dependencies,
 }
 def _collect_dart_files(path: str) -> list[Path]:
     """Collect all .dart files under the given path."""

@@ -6,6 +6,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.12.0] - 2026-11-25
+
+### Added
+- Linter rule `one_widget_per_file` (opt-in, on in revoockv-original 3.0.0 and revoockv-bloc 2.0.0): one public
+  widget per file in `presentation/`; a private helper widget only while it is small (40 lines) and reads no state;
+  one that reads state is a hidden wrapper. `naming_file` / `naming_class` allow `_view.dart` / `…View` in `pages/`
+  (the bloc page's view below its providers).
+- Linter rule `objects_not_maps` (opt-in through `[lint] on`): a record map (`Map<String, dynamic>`,
+  `Map<String, Object?>`, `Map<dynamic, dynamic>`) outside `data/models/` and `data/data_sources/`, and a `Map` in the public API of `domain/`
+  and `presentation/` (fields, getters, parameters and return types of public declarations; locals, private members
+  and private classes are left alone).
+- Templates revoockv-original 2.1.0 and revoockv-bloc 1.1.0: objects, not maps (`rules/errors_models/objects_not_maps.md`),
+  with the rule on.
+- Template revoockv-bloc 2.0.0: typed failures `Result<T, F>` with a failure enum per feature and its text in
+  `presentation/l10n`, as in revoockv-original.
+- Templates revoockv-original 3.0.0 and revoockv-bloc 2.0.0: pages, wrappers and dumb widgets
+  (`rules/state/wrappers.md`); the example apps build their screens the same way with the same dumb widgets and test
+  their rebuild counts.
+- Linter rules `widgets_dumb` (a widget in `presentation/widgets/` imports no state manager, DI, use cases,
+  controllers, blocs, translations or other layers and reads no state) and `wrappers_no_actions` (a wrapper calls no
+  action use case and no `context.read`), opt-in; `naming_file` / `naming_class` know `wrappers/`
+  (`_wrapper.dart`, `Wrapper`).
+- Linter rule `feature_dependencies` (opt-in): a feature imports another only from its `domain/` and its UI parts
+  (widgets, wrappers, blocs, pages, l10n, getters), never its data, controllers or DI registration; an import that
+  closes a circle between features is reported.
+- The example app has a third feature, pins, that the notes and the statistics use (`docs/example_app.md`).
+
 ## [0.11.1] - 2026-11-23
 
 ### Fixed

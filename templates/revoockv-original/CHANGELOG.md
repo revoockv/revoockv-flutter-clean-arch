@@ -2,6 +2,45 @@
 
 Versions of this template. The skill itself has its own versions (`CHANGELOG.md` in the skill root).
 
+## [3.0.0]
+
+- Made from revoockv-original@2.1.0.
+- Pages, wrappers and dumb widgets (`rules/state/wrappers.md`): the page owns the controller, starts the actions and
+  reacts, and never rebuilds; a wrapper in the new `presentation/wrappers/` folder selects with `watchPropertyValue`
+  exactly what one dumb widget shows and starts nothing; widgets in `widgets/` are dumb — data, texts and callbacks,
+  no watch_it, DI, use cases, controllers or translations; a dumb widget may own a plain Flutter controller
+  (`StatefulWidget`). Parameter names as in Flutter (`hintText`, `addLabel`, `isAdding`, `onTap`, `onAddPressed`).
+- Lists: the list wrapper selects the ids, an item wrapper (keyed by id) selects its item, so an edited note rebuilds
+  one tile. `example/test/rebuilds_test.dart` counts builds with `debugOnRebuildDirtyWidget`.
+- One widget per file (`rules/state/wrappers.md`, lint `one_widget_per_file`, on): one public widget per file;
+  a private helper only while it is small (40 lines) and dumb; a private widget that reads state is a wrapper in
+  `wrappers/`; a page file holds the page alone.
+- Lint: `widgets_dumb` and `wrappers_no_actions` on; `wrappers/` files and classes end with `_wrapper.dart` /
+  `Wrapper`.
+- One feature uses another (`rules/structure/feature_dependencies.md`): through its domain and its UI parts, never its
+  data; no circles (lint `feature_dependencies`, on). The example gets the **pins** feature: notes use it
+  (`DeleteNoteUseCase` unpins, the notes page places `PinButtonWrapper` into `NoteTileWidget(leading: …)`), and the
+  statistics count notes and pins through their repositories instead of reading the `notes` table — their data source
+  and model are gone, `NoteFacts` keeps only what they count (`isPinned` added), a "Pinned" number is shown.
+- Example: wrappers for the add button, the list, every note and every number of the statistics; `Note` and
+  `NotesStatistics` compare by value; the dumb widgets are the same files as in revoockv-bloc 2.0.0.
+
+## [2.1.0]
+
+- Made from revoockv-original@2.0.0.
+
+## [2.1.0]
+
+- Made from revoockv-original@2.0.0.
+- Objects, not maps (`rules/errors_models/objects_not_maps.md`, `decisions.md`, `[choices] models`): data with a shape
+  is a class; `Map<String, dynamic>` only at the storage boundary (models in `data/models/`, data sources); no `Map` in
+  the public API of entities, use cases, repository interfaces, widgets and controllers (an object that answers by id
+  or a `List` of entities); local lookups and private caches stay maps.
+- Lint: `objects_not_maps` is on (`[lint] on`).
+- Git (`rules/git/git_rules.md`): "Choose the type" — questions in order (the user's word, hotfix, fix, feature,
+  refactor, docs, test/style) and wrong → right examples, decided before the branch is created; a merge into
+  `develop` only after the user confirms the task is solved; corrections of a task stay on its branch.
+
 ## [2.0.0]
 
 - Made from revoockv-original@1.0.0.

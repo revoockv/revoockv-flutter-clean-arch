@@ -1046,6 +1046,290 @@ class CoreWidgetsPureTest(unittest.TestCase):
         self.assertEqual(run({WIDGETS + "list_widget.dart": code}, self.RULES), [])
 
 
+class ObjectsNotMapsTest(unittest.TestCase):
+    RULES = {"objects_not_maps"}
+
+    def lines(self, rel: str, code: str) -> list[int]:
+        return [line for _, _, line in run({rel: code}, self.RULES)]
+
+    def test_record_maps_live_only_in_models(self):
+        code = """
+            final class NoteModel {
+              factory NoteModel.fromJson(Map<String, dynamic> json) => NoteModel();
+              Map<String, dynamic> toJson() => <String, dynamic>{};
+            }
+        """
+        self.assertEqual(self.lines("features/notes/data/models/note_model.dart", code), [])
+        source = """
+            final class DatabaseNotesDataSource {
+              static List<NoteModel> _toModels(List<Map<String, Object?>> rows) => rows.map(NoteModel.fromRow).toList();
+            }
+        """
+        self.assertEqual(self.lines("features/notes/data/data_sources/database_notes_data_source.dart", source), [])
+        repository = """
+            final class NotesRepositoryImpl {
+              Future<void> save(Map<String, dynamic> note) async {}
+              Note read(Object? value) => _fromMap(value as Map<dynamic, dynamic>);
+            }
+        """
+        self.assertEqual(self.lines("features/notes/data/repositories/notes_repository_impl.dart", repository), [3, 4])
+
+    def test_maps_in_the_public_api_are_violations(self):
+        entity = """
+            final class Stats {
+              final Map<String, int> countsById;
+              Map<DateTime, int> get days => const {};
+              int countOf(Map<String, int> counts) => 0;
+              const Stats({required this.countsById});
+            }
+        """
+        self.assertEqual(self.lines("features/notes/domain/entities/stats.dart", entity), [3, 4, 5])
+        widget = """
+            final class NotesWidget extends StatelessWidget {
+              final ValueNotifier<Map<String, bool>> openController;
+              const NotesWidget({required this.openController, required Map<String, int> counts});
+            }
+        """
+        self.assertEqual(self.lines("features/notes/presentation/widgets/notes_widget.dart", widget), [3, 4])
+
+    def test_locals_private_members_and_private_classes_are_fine(self):
+        code = """
+            final class CoverCounts {
+              final Map<String, int> _bySongId;
+              CoverCounts(List<int> ids) : _bySongId = <String, int>{};
+              int of(String id) {
+                final Map<String, int> local = <String, int>{};
+                return local[id] ?? _bySongId[id] ?? 0;
+              }
+              static Map<String, int> _index(List<int> ids) => <String, int>{};
+              void each(void Function(int) f) {
+                ids.forEach((int id) {
+                  final Map<int, int> inClosure = <int, int>{};
+                });
+              }
+            }
+
+            final class _Tally {
+              final Map<String, int> bySong = <String, int>{};
+            }
+        """
+        self.assertEqual(self.lines("features/notes/domain/entities/cover_counts.dart", code), [])
+
+    def test_off_unless_the_template_turns_it_on(self):
+        self.assertIn("objects_not_maps", linter.OPT_IN_RULES)
+
+
+class DumbWidgetsAndWrappersTest(unittest.TestCase):
+    RULES = {"widgets_dumb", "wrappers_no_actions", "naming_file", "naming_class"}
+
+    def lines(self, rel: str, code: str) -> list[tuple[str, int]]:
+        return [(rule, line) for _, rule, line in run({rel: code}, self.RULES)]
+
+    def test_a_dumb_widget_is_valid(self):
+        code = """
+            import 'package:flutter/material.dart';
+            import '../../domain/entities/note.dart';
+
+            final class NoteTileWidget extends StatelessWidget {
+              final Note note;
+              final VoidCallback onTap;
+              const NoteTileWidget({required this.note, required this.onTap, super.key});
+              @override
+              Widget build(BuildContext context) => ListTile(title: Text(note.text), onTap: onTap);
+            }
+        """
+        self.assertEqual(self.lines("features/notes/presentation/widgets/note_tile_widget.dart", code), [])
+
+    def test_state_in_a_widget_is_a_violation(self):
+        code = """
+            import 'package:watch_it/watch_it.dart';
+            import '../di/notes_getters.dart';
+            import '../l10n/note_failure_text.dart';
+
+            final class NotesListWidget extends WatchingWidget {
+              @override
+              Widget build(BuildContext context) {
+                final notes = watch(watchNotesUseCase()).value;
+                return const SizedBox();
+              }
+            }
+        """
+        found = self.lines("features/notes/presentation/widgets/notes_list_widget.dart", code)
+        self.assertEqual(sorted(line for rule, line in found if rule == "widgets_dumb"), [2, 3, 4, 6, 9])
+
+    def test_a_bloc_read_in_a_widget_is_a_violation(self):
+        code = """
+            import 'package:flutter/material.dart';
+
+            final class AddButtonWidget extends StatelessWidget {
+              @override
+              Widget build(BuildContext context) {
+                final bool isRunning = context.select<NoteActionsCubit, bool>(_isRunning);
+                return const SizedBox();
+              }
+            }
+        """
+        self.assertEqual(self.lines("features/notes/presentation/widgets/add_button_widget.dart", code),
+                         [("widgets_dumb", 7)])
+
+    def test_a_wrapper_selects_and_starts_nothing(self):
+        good = """
+            final class NoteTileWrapper extends WatchingWidget {
+              @override
+              Widget build(BuildContext context) {
+                final Note? note = watchPropertyValue(_noteOf, target: watchNotesUseCase());
+                final Stats stats = calculateStatsUseCase(notes: notes);
+                final List<int> entries = buildTimelineUseCase(notes: notes);
+                return const SizedBox();
+              }
+            }
+        """
+        self.assertEqual(self.lines("features/notes/presentation/wrappers/note_tile_wrapper.dart", good), [])
+        bad = """
+            final class AddNoteWrapper extends StatelessWidget {
+              @override
+              Widget build(BuildContext context) {
+                addNoteUseCase('x');
+                context.read<NoteActionsCubit>().add('x');
+                return const SizedBox();
+              }
+            }
+        """
+        self.assertEqual(self.lines("features/notes/presentation/wrappers/add_note_wrapper.dart", bad),
+                         [("wrappers_no_actions", 5), ("wrappers_no_actions", 6)])
+
+    def test_wrapper_names(self):
+        code = """
+            final class NoteTile extends StatelessWidget {
+              @override
+              Widget build(BuildContext context) => const SizedBox();
+            }
+        """
+        found = self.lines("features/notes/presentation/wrappers/note_tile.dart", code)
+        self.assertIn(("naming_file", 0), found)
+        self.assertIn(("naming_class", 2), found)
+
+    def test_off_unless_the_template_turns_them_on(self):
+        self.assertTrue({"widgets_dumb", "wrappers_no_actions"} <= linter.OPT_IN_RULES)
+
+
+class OneWidgetPerFileTest(unittest.TestCase):
+    RULES = {"one_widget_per_file"}
+    HEAD = """
+        import 'package:flutter/material.dart';
+        import 'package:watch_it/watch_it.dart';
+
+        /// A.
+        final class NotesWidget extends StatelessWidget {
+          /// Creates it.
+          const NotesWidget({super.key});
+          @override
+          Widget build(BuildContext context) => const _DotWidget();
+        }
+    """
+
+    def lint(self, folder, tail):
+        return run({f"features/notes/presentation/{folder}/notes_widget.dart": self.HEAD + tail}, self.RULES)
+
+    def test_a_small_dumb_helper_may_stay(self):
+        tail = """
+        final class _DotWidget extends StatelessWidget {
+          const _DotWidget();
+          @override
+          Widget build(BuildContext context) => const SizedBox();
+        }
+        """
+        self.assertEqual(self.lint("widgets", tail), [])
+
+    def test_a_second_public_widget_goes_to_its_own_file(self):
+        tail = """
+        /// B.
+        final class OtherWidget extends StatelessWidget {
+          /// Creates it.
+          const OtherWidget({super.key});
+          @override
+          Widget build(BuildContext context) => const SizedBox();
+        }
+        """
+        self.assertEqual([v[1] for v in self.lint("widgets", tail)], ["one_widget_per_file"])
+
+    def test_a_private_watching_widget_in_a_page_is_a_wrapper(self):
+        tail = """
+        final class _CountWidget extends WatchingWidget {
+          const _CountWidget();
+          @override
+          Widget build(BuildContext context) => Text('${watchValue((Model m) => m.count)}');
+        }
+        """
+        self.assertEqual([v[1] for v in self.lint("pages", tail)], ["one_widget_per_file"])
+
+    def test_a_private_bloc_builder_is_a_wrapper(self):
+        tail = """
+        final class _CountWidget extends StatelessWidget {
+          const _CountWidget();
+          @override
+          Widget build(BuildContext context) => BlocBuilder<CountCubit, int>(builder: (_, int n) => Text('$n'));
+        }
+        """
+        self.assertEqual([v[1] for v in self.lint("pages", tail)], ["one_widget_per_file"])
+
+    def test_a_big_private_widget_gets_its_own_file(self):
+        lines = "".join("            const SizedBox(),\n" for _ in range(45))
+        tail = (
+            "        final class _BigWidget extends StatelessWidget {\n"
+            "          const _BigWidget();\n"
+            "          @override\n"
+            "          Widget build(BuildContext context) => Column(children: <Widget>[\n" + lines +
+            "          ]);\n        }\n"
+        )
+        self.assertEqual([v[1] for v in self.lint("widgets", tail)], ["one_widget_per_file"])
+
+
+class LongConstructorKeyTest(unittest.TestCase):
+    def test_super_key_after_many_parameters_is_found(self):
+        params = "".join(f"    required this.p{i},\n" for i in range(12))
+        fields = "".join(f"  final int p{i};\n" for i in range(12))
+        code = (
+            "final class LongWidget extends StatelessWidget {\n" + fields +
+            "  const LongWidget({\n" + params + "    super.key,\n  });\n"
+            "  @override\n  Widget build(BuildContext context) => const SizedBox();\n}\n"
+        )
+        self.assertEqual(run({"features/notes/presentation/widgets/long_widget.dart": code}, {"widget_key_parameter"}), [])
+
+
+class FeatureDependenciesTest(unittest.TestCase):
+    RULES = {"feature_dependencies"}
+
+    def test_domain_and_ui_of_another_feature_are_allowed(self):
+        files = {
+            "features/notes/domain/use_cases/delete_note_use_case.dart":
+                "import 'package:app/features/pins/domain/repositories/pins_repository.dart';\n",
+            "features/notes/presentation/pages/notes_page.dart":
+                "import '../../../pins/presentation/wrappers/pin_button_wrapper.dart';\n"
+                "import 'package:app/features/pins/presentation/di/pins_getters.dart';\n",
+            "features/pins/domain/repositories/pins_repository.dart": "abstract interface class PinsRepository {}\n",
+        }
+        self.assertEqual(run(files, self.RULES), [])
+
+    def test_data_and_di_registration_of_another_feature_are_violations(self):
+        files = {
+            "features/statistics/data/repositories/statistics_repository_impl.dart":
+                "import 'package:app/features/notes/data/models/note_model.dart';\n"
+                "import 'package:app/features/notes/presentation/di/notes_di.dart';\n",
+        }
+        self.assertEqual([line for _, _, line in run(files, self.RULES)], [1, 2])
+
+    def test_features_that_use_each_other_are_violations(self):
+        files = {
+            "features/notes/domain/use_cases/delete_note_use_case.dart":
+                "import 'package:app/features/pins/domain/repositories/pins_repository.dart';\n",
+            "features/pins/domain/use_cases/pin_use_case.dart":
+                "import 'package:app/features/notes/domain/entities/note.dart';\n",
+        }
+        found = {(name, line) for name, _, line in run(files, self.RULES)}
+        self.assertEqual(found, {("delete_note_use_case.dart", 1), ("pin_use_case.dart", 1)})
+
+
 class FalsePositivesTest(unittest.TestCase):
     def test_closure_forwarding_an_enum_value_is_allowed(self):
         code = """
