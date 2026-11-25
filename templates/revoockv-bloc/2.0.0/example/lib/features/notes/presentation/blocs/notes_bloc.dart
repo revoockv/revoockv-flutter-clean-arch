@@ -20,7 +20,7 @@ final class NotesBloc extends Bloc<NotesEvent, NotesState> {
       emit.forEach<Result<List<Note>, NoteFailure>>(_watchNotesUseCase(), onData: _toState);
 
   static NotesState _toState(Result<List<Note>, NoteFailure> result) => switch (result) {
-        SuccessResult<List<Note>, NoteFailure>(:final List<Note> value) => NotesLoaded(value),
-        FailureResult<List<Note>, NoteFailure>(:final NoteFailure failure) => NotesLoadFailed(failure),
-      };
+    SuccessResult<List<Note>, NoteFailure>(:final List<Note> value) => NotesLoaded(value),
+    FailureResult<List<Note>, NoteFailure>(:final NoteFailure failure) => NotesLoadFailed(failure),
+  };
 }

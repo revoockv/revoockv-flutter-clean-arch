@@ -9,7 +9,7 @@ Blocs and cubits: `blocs.md`. Widget shape: `widget_rules.md`.
 | dumb widget | `widgets/` | draws data, calls callbacks | none | none |
 
 ```
-NotesPage → _NotesViewWidget    BlocProviders, BlocListener (snackbars), texts, cubit methods as callbacks
+NotesPage → NotesView           BlocProviders; the view: BlocListener (snackbars), texts, cubit methods as callbacks
 ├─ AddNoteWrapper               BlocSelector<NoteActionsCubit, …, bool>(isRunning); owns the field's controller
 │   └─ AddNoteWidget(noteTextController, isAdding, hintText, addLabel, onAddPressed)
 └─ NotesListWrapper             BlocSelector<NotesBloc, …, _NotesListContent>(ids)
@@ -18,7 +18,7 @@ NotesPage → _NotesViewWidget    BlocProviders, BlocListener (snackbars), texts
             └─ NoteTileWidget(note, deleteTooltip, onTap, onDeletePressed)
 ```
 
-Code: `example/lib/features/notes/presentation/` (`pages/notes_page.dart`, `wrappers/`, `widgets/`) and
+Code: `example/lib/features/notes/presentation/` (`pages/notes_page.dart`, `pages/notes_view.dart`, `wrappers/`, `widgets/`) and
 `example/lib/features/statistics/presentation/` (a wrapper per number).
 
 ## Dumb widgets — `presentation/widgets/`
@@ -71,6 +71,28 @@ from the page. It rebuilds only when that part changes.
 The page is the smart one: it owns the UI controller or creates the blocs, starts the actions, reacts to their
 outcome (snackbars, dialogs, navigation) and holds the texts. It places wrappers and dumb widgets and **never
 rebuilds itself**.
+
+### Page and View (bloc)
+
+The blocs a page creates are reachable only below their `BlocProvider`, so a bloc page is two files in `pages/`:
+
+- `notes_page.dart` — `NotesPage`: only the `MultiBlocProvider` that creates the blocs, `child: const NotesView()`;
+- `notes_view.dart` — `NotesView`: the rest of the page — the texts, the `BlocListener`s, the cubits' methods passed
+  down as callbacks; it places the wrappers and never rebuilds.
+
+Code: `example/lib/features/notes/presentation/pages/` and `example/lib/core/presentation/pages/` (`HomeView`).
+
+## One widget per file
+
+Every page, wrapper and widget has a file of its own (linter: `one_widget_per_file`):
+
+- one public widget per file — its `State` and its `…Texts` class stay with it;
+- a private helper widget may stay next to it only while it is **small** (40 lines at most) and **dumb**; a bigger
+  one goes to `widgets/` as a public widget, with a file of its own;
+- a private widget that reads state (watch_it, `BlocBuilder` / `BlocSelector` / `BlocListener`, `context.read`) is a
+  hidden wrapper: it goes to `wrappers/` as a public `…Wrapper`;
+- a page file holds the page alone: its tabs, sections and counters are wrappers, and the searching, ordering and
+  picking of what they show are use cases, not static helpers of the page.
 
 ## Lists
 

@@ -16,11 +16,8 @@ final class NoteActionsCubit extends Cubit<NoteActionsState> {
   final DeleteNoteUseCase _deleteNoteUseCase;
 
   /// Creates the cubit.
-  NoteActionsCubit({
-    required this._addNoteUseCase,
-    required this._updateNoteUseCase,
-    required this._deleteNoteUseCase,
-  }) : super(const NoteActionsIdle());
+  NoteActionsCubit({required this._addNoteUseCase, required this._updateNoteUseCase, required this._deleteNoteUseCase})
+    : super(const NoteActionsIdle());
 
   /// Adds a note with [text]; ignored while another action runs.
   Future<void> add(String text) => _run(NoteAction.added, () => _addNoteUseCase(text));

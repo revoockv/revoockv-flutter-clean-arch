@@ -106,11 +106,15 @@ ALL_RULES = {
     "widgets_dumb",
     "wrappers_no_actions",
     "feature_dependencies",
+    "one_widget_per_file",
 }
 
 # Rules a template turns on itself (`[lint] on`): with all rules they run only when listed there, so the templates
 # made before them keep passing.
-OPT_IN_RULES = {"watch_select", "core_widgets_pure", "objects_not_maps", "widgets_dumb", "wrappers_no_actions", "feature_dependencies"}
+OPT_IN_RULES = {
+    "watch_select", "core_widgets_pure", "objects_not_maps", "widgets_dumb", "wrappers_no_actions",
+    "feature_dependencies", "one_widget_per_file",
+}
 
 # Folders (relative to lib/) of the widgets shared by features (the template's [lint.params] core_widget_dirs)
 CORE_WIDGET_DIRS: tuple[str, ...] = ()
@@ -420,10 +424,11 @@ def check_naming_file(result: AnalysisResult) -> None:
         ))
 
     # Page files
-    if "pages/" in fp and not basename.endswith("_page.dart"):
+    # Page files; `_view.dart` is the part of a page below its providers (bloc: XPage provides, XView shows)
+    if "pages/" in fp and not basename.endswith(("_page.dart", "_view.dart")):
         result.violations.append(Violation(
             file=fp, line=0, rule="naming_file",
-            message=f"Page file '{basename}' must end with _page.dart",
+            message=f"Page file '{basename}' must end with _page.dart (or _view.dart for the view below its providers)",
         ))
 
     # Use case files
@@ -472,7 +477,9 @@ def check_naming_class(result: AnalysisResult) -> None:
                     message=f"Wrapper class '{class_name}' must end with Wrapper suffix",
                     snippet=_line_at(content, i),
                 ))
-            elif not in_wrappers and not class_name.endswith("Widget") and not class_name.endswith("Page"):
+            elif not in_wrappers and not class_name.endswith(("Widget", "Page")) and not (
+                class_name.endswith("View") and "/pages/" in result.file.replace(os.sep, "/")
+            ):
                 result.violations.append(Violation(
                     file=result.file, line=i, rule="naming_class",
                     message=f"Widget class '{class_name}' must end with Widget suffix",
@@ -2714,6 +2721,62 @@ def check_wrappers_no_actions(result: AnalysisResult) -> None:
             ))
 
 
+# ── one_widget_per_file ─────────────────────────────────────────────
+
+_WIDGET_BASES = {"StatelessWidget", "StatefulWidget", "WatchingWidget", "WatchingStatefulWidget"}
+# A part of the screen that reads state: watch_it, the bloc builders, or the context's read/watch/select.
+_HIDDEN_WRAPPER = re.compile(
+    r'\b(?:watch|watchValue|watchPropertyValue|watchIt|registerHandler|createOnce|callOnce)\s*[<(]'
+    r'|\bBloc(?:Builder|Selector|Listener|Consumer)\s*[<(]|\bcontext\.(?:read|watch|select)\s*<'
+)
+# The most lines (the class block) a private helper widget may have; a bigger one gets a file of its own.
+SMALL_PRIVATE_WIDGET_LINES = 40
+
+
+def check_one_widget_per_file(result: AnalysisResult) -> None:
+    """One widget per file in `presentation/` (pages, wrappers, widgets); only small dumb helpers may share it.
+
+    - One public widget (its `State` and its `…Texts` class belong to it).
+    - A private widget may stay next to it only when it is small (at most `SMALL_PRIVATE_WIDGET_LINES` lines) and
+      reads no state; a bigger one goes to `widgets/` as a public widget.
+    - A private widget that reads state is a hidden wrapper: it goes to `wrappers/` (`<name>_wrapper.dart`).
+    """
+    if not _is_presentation_file(result.file) or _is_in_di_folder(result.file):
+        return
+    content = _read_file(Path(result.file))
+    code, _ = _scan_dart(content)
+    widgets = [w for w in _widget_classes(code) if w[1] in _WIDGET_BASES]
+    public = [w for w in widgets if not w[0].startswith("_")]
+    for name, _, _, offset, _ in public[1:]:
+        i = code.count("\n", 0, offset) + 1
+        result.violations.append(Violation(
+            file=result.file, line=i, rule="one_widget_per_file",
+            message=f"{name}: one public widget per file — move it to a file of its own",
+            snippet=_line_at(content, i),
+        ))
+    for name, base, _, offset, body in widgets:
+        if not name.startswith("_"):
+            continue
+        i = code.count("\n", 0, offset) + 1
+        state = _state_body(code, name) if base in ("StatefulWidget", "WatchingStatefulWidget") else ""
+        if base.startswith("Watching") or _HIDDEN_WRAPPER.search(body + state):
+            message = f"{name} reads state: it is a wrapper — move it to wrappers/ as a public …Wrapper"
+        elif body.count("\n") + state.count("\n") > SMALL_PRIVATE_WIDGET_LINES:
+            message = (f"{name} is over {SMALL_PRIVATE_WIDGET_LINES} lines: move it to widgets/ as a public widget "
+                       f"of its own")
+        else:
+            continue
+        result.violations.append(Violation(
+            file=result.file, line=i, rule="one_widget_per_file", message=message, snippet=_line_at(content, i),
+        ))
+
+
+def _state_body(code: str, widget: str) -> str:
+    """The body of the `State<[widget]>` class in [code], or an empty string."""
+    m = re.search(r'\bclass\s+\w+\s+extends\s+State\s*<\s*' + re.escape(widget) + r'\s*>[^{;]*\{', code)
+    return code[m.end():_block_end(code, m.end() - 1)] if m else ""
+
+
 # ── feature_dependencies ────────────────────────────────────────────
 
 _IMPORT_URI = re.compile(r"""^\s*(?:import|export)\s+['"]([^'"]+)['"]""", re.M)
@@ -2846,6 +2909,7 @@ CHECKERS = {
     "objects_not_maps": check_objects_not_maps,
     "widgets_dumb": check_widgets_dumb,
     "wrappers_no_actions": check_wrappers_no_actions,
+    "one_widget_per_file": check_one_widget_per_file,
     "feature_dependencies": check_feature_dependencies,
 }
 def _collect_dart_files(path: str) -> list[Path]:

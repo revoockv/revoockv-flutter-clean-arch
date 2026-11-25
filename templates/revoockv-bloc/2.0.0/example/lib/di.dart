@@ -18,9 +18,7 @@ final class AppProvidersWidget extends StatelessWidget {
     // A feature sits below the features it uses: notes use pins; statistics use notes and pins.
     return CoreProvidersWidget(
       child: PinsProvidersWidget(
-        child: NotesProvidersWidget(
-          child: StatisticsProvidersWidget(child: child),
-        ),
+        child: NotesProvidersWidget(child: StatisticsProvidersWidget(child: child)),
       ),
     );
   }

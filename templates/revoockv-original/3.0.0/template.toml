@@ -102,7 +102,7 @@ tracked = ["get_it", "watch_it", "logger", "uuid", "flutter_lints"]
 # Rules this template turns off (none: all 33 apply).
 off = []
 # Opt-in rules this template turns on.
-on = ["watch_select", "core_widgets_pure", "objects_not_maps", "widgets_dumb", "wrappers_no_actions", "feature_dependencies"]
+on = ["watch_select", "core_widgets_pure", "objects_not_maps", "widgets_dumb", "wrappers_no_actions", "feature_dependencies", "one_widget_per_file"]
 # Rules reported as warnings: shown, but `--strict` does not fail on them.
 warn = []
 

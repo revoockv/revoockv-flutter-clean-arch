@@ -31,11 +31,11 @@ final class NotesRepositoryImpl implements NotesRepository {
 
   @override
   Stream<Result<List<Note>, NoteFailure>> watchNotes() => _dataSource.watchNotes().transform(
-        StreamTransformer<List<NoteModel>, Result<List<Note>, NoteFailure>>.fromHandlers(
-          handleData: _onNotes,
-          handleError: _onError,
-        ),
-      );
+    StreamTransformer<List<NoteModel>, Result<List<Note>, NoteFailure>>.fromHandlers(
+      handleData: _onNotes,
+      handleError: _onError,
+    ),
+  );
 
   @override
   Future<Result<void, NoteFailure>> addNote(String text) async {

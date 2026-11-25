@@ -1,6 +1,5 @@
 import 'dart:async';
 
-
 import 'app_database.dart';
 
 /// [AppDatabase] in memory: behaves like a database (latency, change streams, missing rows fail) without storing
@@ -25,11 +24,9 @@ final class InMemoryAppDatabase implements AppDatabase {
   Stream<List<Map<String, Object?>>> watchTable(String table) =>
       Stream<List<Map<String, Object?>>>.multi((MultiStreamController<List<Map<String, Object?>>> listener) {
         listener.add(_rows(table));
-        final StreamSubscription<List<Map<String, Object?>>> sub = _changesOf(table).stream.listen(
-          listener.add,
-          onError: listener.addError,
-          onDone: listener.close,
-        );
+        final StreamSubscription<List<Map<String, Object?>>> sub = _changesOf(
+          table,
+        ).stream.listen(listener.add, onError: listener.addError, onDone: listener.close);
         listener.onCancel = sub.cancel;
       });
 

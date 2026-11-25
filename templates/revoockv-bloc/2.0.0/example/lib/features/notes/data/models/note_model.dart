@@ -28,11 +28,11 @@ final class NoteModel {
 
   /// Reads a row of the `notes` table.
   factory NoteModel.fromRow(Map<String, Object?> row) => NoteModel(
-        id: row[AppDatabase.idColumn]! as String,
-        text: row[_textColumn]! as String,
-        createdAt: DateTime.parse(row[_createdAtColumn]! as String),
-        updatedAt: DateTime.parse(row[_updatedAtColumn]! as String),
-      );
+    id: row[AppDatabase.idColumn]! as String,
+    text: row[_textColumn]! as String,
+    createdAt: DateTime.parse(row[_createdAtColumn]! as String),
+    updatedAt: DateTime.parse(row[_updatedAtColumn]! as String),
+  );
 
   /// Creates a model from a domain [entity].
   factory NoteModel.fromEntity(Note entity) =>
@@ -40,11 +40,11 @@ final class NoteModel {
 
   /// The row to store.
   Map<String, Object?> toRow() => <String, Object?>{
-        AppDatabase.idColumn: id,
-        _textColumn: text,
-        _createdAtColumn: createdAt.toIso8601String(),
-        _updatedAtColumn: updatedAt.toIso8601String(),
-      };
+    AppDatabase.idColumn: id,
+    _textColumn: text,
+    _createdAtColumn: createdAt.toIso8601String(),
+    _updatedAtColumn: updatedAt.toIso8601String(),
+  };
 
   /// Converts the model into a domain entity.
   Note toEntity() => Note(id: id, text: text, createdAt: createdAt, updatedAt: updatedAt);
