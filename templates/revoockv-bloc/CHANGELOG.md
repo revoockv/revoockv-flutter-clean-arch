@@ -2,6 +2,20 @@
 
 Versions of this template. The skill itself has its own versions (`CHANGELOG.md` in the skill root).
 
+## [2.0.0]
+
+- Made from revoockv-bloc@1.1.0.
+
+## [2.0.0]
+
+- Made from revoockv-bloc@1.1.0.
+- Typed failures, as in revoockv-original (`rules/errors_models/result.md`): `Result<T, F>` instead of `Result<T>` with a
+  `String`; `F` is the failure enum of the feature (`NoteFailure`, `StatisticsFailure` in `domain/entities`) or core
+  `TextOnlyFailure` in an app without translations. Repositories and use cases return failures, not texts; blocs and
+  cubits keep the failure in their state (`NotesLoadFailed(failure)`, `NoteActionsFailed(failure)`); the text is chosen
+  in the new `presentation/l10n` folder (`note_failure_text.dart`), so a new failure without a text does not compile.
+- `[structure]`: `presentation/l10n`.
+
 ## [1.1.0]
 
 - Made from revoockv-bloc@1.0.0.
